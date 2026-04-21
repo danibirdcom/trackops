@@ -1,0 +1,75 @@
+# TrackOps — configuración de referencia para Nginx
+# Copiar a /etc/nginx/sites-available/trackops y enlazar desde sites-enabled.
+# Sustituir EXAMPLE_DOMAIN por tu dominio real antes de activarla.
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name EXAMPLE_DOMAIN www.EXAMPLE_DOMAIN;
+
+    # Certbot colocará aquí el desafío durante la renovación
+    location /.well-known/acme-challenge/ {
+        root /var/www/letsencrypt;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name EXAMPLE_DOMAIN www.EXAMPLE_DOMAIN;
+
+    ssl_certificate     /etc/letsencrypt/live/EXAMPLE_DOMAIN/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/EXAMPLE_DOMAIN/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+
+    root /var/www/trackops;
+    index index.html;
+
+    # El service worker nunca debe cachearse en CDN / navegador
+    location = /sw.js {
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+        add_header Service-Worker-Allowed "/";
+    }
+
+    # Assets con hash en el nombre: cache eterno seguro
+    location /assets/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # Proxy al backend de sync (REST + SSE)
+    location /api/ {
+        proxy_pass http://127.0.0.1:8787;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For  $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Requisitos para SSE
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_read_timeout 24h;
+        proxy_send_timeout 24h;
+        chunked_transfer_encoding on;
+    }
+
+    # SPA fallback: cualquier ruta del BrowserRouter devuelve index.html
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    gzip on;
+    gzip_types application/javascript application/json text/css text/plain image/svg+xml;
+    gzip_min_length 1024;
+
+    client_max_body_size 10M;
+}

@@ -1,0 +1,29 @@
+[Unit]
+Description=TrackOps sync server (REST + SSE)
+After=network.target
+Documentation=https://github.com/anthropics/claude-code
+
+[Service]
+Type=simple
+User=trackops
+Group=trackops
+WorkingDirectory=/opt/trackops/server
+Environment=NODE_ENV=production
+Environment=PORT=8787
+Environment=TRACKOPS_DATA_DIR=/opt/trackops/data
+# Cambia el token antes de activar la unidad
+Environment=TRACKOPS_TOKEN=cambiame-por-un-token-largo-aleatorio
+ExecStart=/usr/bin/node index.js
+Restart=on-failure
+RestartSec=5
+
+# Endurecido básico
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/opt/trackops/data
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target

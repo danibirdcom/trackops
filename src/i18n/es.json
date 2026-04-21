@@ -1,0 +1,64 @@
+{
+  "app": {
+    "name": "TrackOps",
+    "tagline": "Planificación operativa para eventos deportivos"
+  },
+  "home": {
+    "newProject": "Nuevo proyecto",
+    "recentProjects": "Proyectos recientes",
+    "empty": "Aún no hay proyectos. Crea el primero para empezar.",
+    "placeholderProject": "Abrir proyecto de ejemplo"
+  },
+  "project": {
+    "untitled": "Proyecto sin nombre",
+    "tabs": {
+      "tracks": "Tracks",
+      "sectors": "Sectores",
+      "points": "Puntos",
+      "volunteers": "Voluntarios",
+      "legend": "Leyenda"
+    },
+    "toggleSidebar": "Mostrar u ocultar barra lateral",
+    "toggleDarkMode": "Cambiar modo oscuro",
+    "back": "Volver",
+    "cycleBaseLayer": "Cambiar capa base",
+    "openExport": "Exportar y compartir",
+    "openOffline": "Preparar offline"
+  },
+  "search": {
+    "placeholder": "Buscar dirección…",
+    "label": "Buscar dirección",
+    "clear": "Limpiar",
+    "error": "Error en la búsqueda"
+  },
+  "offline": {
+    "title": "Preparar offline",
+    "intro": "Descarga los tiles del mapa dentro del área del track para poder consultarlo sin conexión durante el evento.",
+    "zoom": "Zoom base",
+    "tiles": "Teselas",
+    "size": "Tamaño estimado",
+    "download": "Descargar teselas",
+    "stop": "Detener",
+    "clear": "Vaciar caché",
+    "cacheStatus": "Caché actual",
+    "noBounds": "Importa primero un track para calcular el área a descargar.",
+    "swInactive": "El service worker solo se activa en build de producción."
+  },
+  "exportDialog": {
+    "title": "Exportar y compartir",
+    "planPdf": "PDF del plano operativo",
+    "directoryPdf": "PDF del directorio de voluntarios",
+    "projectJson": "Proyecto como JSON",
+    "shareLink": "Enlace de solo lectura",
+    "generate": "Generar enlace",
+    "regenerate": "Regenerar",
+    "copy": "Copiar",
+    "copied": "Copiado",
+    "includeContact": "Incluir datos de contacto"
+  },
+  "shared": {
+    "readOnlyBadge": "Solo lectura",
+    "invalid": "El enlace no contiene datos del proyecto.",
+    "loading": "Cargando enlace compartido…"
+  }
+}

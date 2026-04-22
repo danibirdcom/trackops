@@ -73,7 +73,7 @@ CERT_DIR="/etc/letsencrypt/live/$DOMAIN"
 sudo mkdir -p /var/www/letsencrypt
 sudo chown -R www-data:www-data /var/www/letsencrypt
 
-if [ -f "$CERT_DIR/fullchain.pem" ]; then
+if sudo test -f "$CERT_DIR/fullchain.pem"; then
   log "cert found, installing HTTP+HTTPS config"
   sudo cp "$REPO_DIR/deploy/nginx.conf.example" "$NGINX_DST"
   sudo sed -i "s/EXAMPLE_DOMAIN/$DOMAIN/g" "$NGINX_DST"
@@ -105,7 +105,7 @@ sudo systemctl reload nginx
 log "done"
 echo
 echo "=========================================================="
-if [ -f "$CERT_DIR/fullchain.pem" ]; then
+if sudo test -f "$CERT_DIR/fullchain.pem"; then
   echo " HTTPS activo en https://$DOMAIN"
 else
   echo " Ahora emite el certificado con certbot en modo webroot"

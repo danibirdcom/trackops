@@ -67,24 +67,36 @@ sudo systemctl enable --now trackops-sync
 sleep 1
 sudo systemctl status trackops-sync --no-pager | head -6 || true
 
-log "7/7 nginx http-only config (certbot runs later)"
-NGINX_SRC="$REPO_DIR/deploy/nginx.conf.example"
+log "7/7 nginx config"
 NGINX_DST="/etc/nginx/sites-available/trackops"
-sudo cp "$NGINX_SRC" "$NGINX_DST"
-sudo sed -i "s/EXAMPLE_DOMAIN/$DOMAIN/g" "$NGINX_DST"
-# Strip the HTTPS server block until certbot installs the cert
-sudo python3 - "$NGINX_DST" <<'PY'
-import re, sys, pathlib
-p = pathlib.Path(sys.argv[1])
-src = p.read_text()
-# Remove the second server block (listen 443)
-import re
-pattern = re.compile(r"\nserver\s*\{[^{}]*listen 443[^{}]*(?:\{[^{}]*\}[^{}]*)*\}\s*", re.S)
-new = pattern.sub("\n", src, count=1)
-p.write_text(new)
-PY
+CERT_DIR="/etc/letsencrypt/live/$DOMAIN"
 sudo mkdir -p /var/www/letsencrypt
 sudo chown -R www-data:www-data /var/www/letsencrypt
+
+if [ -f "$CERT_DIR/fullchain.pem" ]; then
+  log "cert found, installing HTTP+HTTPS config"
+  sudo cp "$REPO_DIR/deploy/nginx.conf.example" "$NGINX_DST"
+  sudo sed -i "s/EXAMPLE_DOMAIN/$DOMAIN/g" "$NGINX_DST"
+else
+  log "no cert yet, installing HTTP-only config (serves ACME challenges)"
+  sudo tee "$NGINX_DST" > /dev/null <<CONF
+server {
+    listen 80;
+    listen [::]:80;
+    server_name $DOMAIN;
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/letsencrypt;
+    }
+
+    location / {
+        return 503 "TrackOps: HTTPS not provisioned yet. Run certbot --webroot -w /var/www/letsencrypt -d $DOMAIN";
+        add_header Content-Type text/plain;
+    }
+}
+CONF
+fi
+
 sudo ln -sf "$NGINX_DST" /etc/nginx/sites-enabled/trackops
 sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t
@@ -93,11 +105,17 @@ sudo systemctl reload nginx
 log "done"
 echo
 echo "=========================================================="
-echo " Next step: point $DOMAIN -> this instance's public IP."
-echo " Then run certbot:"
-echo
-echo "   sudo apt install -y certbot python3-certbot-nginx"
-echo "   sudo certbot --nginx -d $DOMAIN --redirect --agree-tos -m dani@birdcom.es"
-echo
-echo " Sync token saved to $APP_ROOT/sync-token.txt (readable by root)."
+if [ -f "$CERT_DIR/fullchain.pem" ]; then
+  echo " HTTPS activo en https://$DOMAIN"
+else
+  echo " Ahora emite el certificado con certbot en modo webroot"
+  echo " (no uses --nginx, corrompe el config):"
+  echo
+  echo "   sudo apt install -y certbot"
+  echo "   sudo certbot certonly --webroot -w /var/www/letsencrypt \\"
+  echo "       -d $DOMAIN --agree-tos -m dani@birdcom.es -n"
+  echo
+  echo " Después vuelve a ejecutar este install.sh para activar HTTPS."
+fi
+echo " Sync token en $APP_ROOT/sync-token.txt (solo root)."
 echo "=========================================================="

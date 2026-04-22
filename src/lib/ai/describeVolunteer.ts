@@ -70,6 +70,11 @@ export function buildRoleDescriptionContext(project: Project, volunteerId: strin
   return { volunteer, points: assignedPoints, sectors, chiefByVolunteer, peers, project }
 }
 
+function isSubstantial(text: string | null | undefined): boolean {
+  if (!text) return false
+  return text.trim().length >= 15
+}
+
 export function describeVolunteerRole(ctx: RoleDescriptionContext): string {
   const { volunteer, points, sectors, chiefByVolunteer, project } = ctx
   const firstPoint = points[0]
@@ -97,7 +102,21 @@ export function describeVolunteerRole(ctx: RoleDescriptionContext): string {
         ? `Tu responsable de zona es ${chiefsList.join(', ')}. Contacta con él o ella ante cualquier incidencia.`
         : 'No se ha asignado todavía un responsable de zona; coordínate directamente con el director de carrera.'
 
-  const instructions = firstPoint ? POINT_TYPE_INSTRUCTIONS[firstPoint.type] ?? '' : ''
+  const hasCustomDescription = firstPoint ? isSubstantial(firstPoint.description) : false
+  const hasCustomNotes = isSubstantial(volunteer.notes)
+
+  const customBlocks: string[] = []
+  if (firstPoint && hasCustomDescription) {
+    customBlocks.push(`Instrucciones específicas del punto: ${firstPoint.description.trim()}`)
+  }
+  if (hasCustomNotes) {
+    customBlocks.push(`Notas para ti: ${volunteer.notes.trim()}`)
+  }
+
+  const genericInstructions =
+    firstPoint && !hasCustomDescription && !hasCustomNotes
+      ? POINT_TYPE_INSTRUCTIONS[firstPoint.type] ?? ''
+      : ''
 
   const roleIntro = volunteer.role
     ? `Tu rol dentro del evento "${project.name}" es ${volunteer.role}`
@@ -107,7 +126,8 @@ export function describeVolunteerRole(ctx: RoleDescriptionContext): string {
     `${roleIntro}. ${pointDesc}.${extraPoints}`,
     sectorDesc,
     chiefDesc,
-    instructions,
+    ...customBlocks,
+    genericInstructions,
   ]
     .filter(Boolean)
     .join(' ')

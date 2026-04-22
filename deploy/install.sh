@@ -56,6 +56,16 @@ sudo rsync -a --delete "$REPO_DIR/server/" "$SERVER_DIR/"
 sudo chown -R trackops:trackops "$SERVER_DIR" "$DATA_DIR"
 
 sudo cp "$REPO_DIR/deploy/trackops-sync.service" "$SYNC_UNIT"
+sudo mkdir -p /etc/trackops
+if [ ! -f /etc/trackops/env ]; then
+  sudo tee /etc/trackops/env > /dev/null <<'ENVEOF'
+# Opcional: API key de Google Gemini para generar los briefings del voluntario.
+# Regístrate en https://aistudio.google.com/app/apikey y descomenta la línea:
+# GEMINI_API_KEY=tu-clave-aqui
+# GEMINI_MODEL=gemini-2.0-flash
+ENVEOF
+  sudo chmod 600 /etc/trackops/env
+fi
 sudo systemctl daemon-reload
 sudo systemctl enable trackops-sync >/dev/null
 sudo systemctl restart trackops-sync
@@ -113,4 +123,7 @@ else
   echo " Después vuelve a ejecutar este install.sh para activar HTTPS."
 fi
 echo " Auth: contraseña por proyecto (se define al crear cada proyecto)."
+echo " IA: edita /etc/trackops/env y define GEMINI_API_KEY para activar"
+echo "     los briefings generados por Gemini en la vista de voluntario."
+echo "     Tras editar: sudo systemctl restart trackops-sync"
 echo "=========================================================="

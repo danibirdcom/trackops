@@ -17,10 +17,13 @@ import { randomUUID } from 'node:crypto'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const DATA_DIR = path.resolve(process.env.TRACKOPS_DATA_DIR ?? path.join(__dirname, 'data'))
 const LEGACY_TOKEN = process.env.TRACKOPS_TOKEN ?? null
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY ?? null
+const GEMINI_MODEL = process.env.GEMINI_MODEL ?? 'gemini-2.0-flash'
 const PORT = Number(process.env.PORT ?? 8787)
 const MAX_BODY = 8 * 1024 * 1024
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000
 const SCRYPT_KEY_LEN = 64
+const AI_CACHE_TTL_MS = 10 * 60 * 1000
 
 await fs.mkdir(DATA_DIR, { recursive: true })
 
@@ -30,6 +33,8 @@ const subscribersByProject = new Map()
 const subscriberMeta = new Map()
 /** @type {Map<string, { projectId: string, exp: number }>} */
 const sessions = new Map()
+/** @type {Map<string, { text: string, exp: number }>} */
+const aiCache = new Map()
 
 function corsHeaders(origin) {
   return {
@@ -300,6 +305,79 @@ function handleSse(req, res, origin) {
   })
 }
 
+async function generateDescription(project, volunteer) {
+  const assignedPoints = (project.points ?? []).filter((p) => p.volunteerIds?.includes(volunteer.id))
+  const sectorIds = new Set()
+  for (const p of assignedPoints) if (p.sectorId) sectorIds.add(p.sectorId)
+  for (const s of project.sectors ?? []) if (s.chiefVolunteerId === volunteer.id) sectorIds.add(s.id)
+  const sectors = (project.sectors ?? []).filter((s) => sectorIds.has(s.id))
+  const chiefs = []
+  for (const s of sectors) {
+    if (s.chiefVolunteerId && s.chiefVolunteerId !== volunteer.id) {
+      const chief = project.volunteers.find((v) => v.id === s.chiefVolunteerId)
+      if (chief) chiefs.push({ sector: s.name, name: chief.name })
+    }
+  }
+  const context = {
+    evento: project.name,
+    voluntario: {
+      nombre: volunteer.name,
+      rol: volunteer.role || null,
+      notas_del_organizador: volunteer.notes || null,
+    },
+    puntos: assignedPoints.map((p) => ({
+      nombre: p.name,
+      tipo: p.type,
+      km: p.kmMark,
+      descripcion_del_organizador: p.description || null,
+    })),
+    sectores: sectors.map((s) => ({ nombre: s.name, notas: s.notes || null })),
+    responsables_de_zona: chiefs,
+    es_responsable_de_sector: sectors.some((s) => s.chiefVolunteerId === volunteer.id),
+  }
+
+  const prompt = `Eres el asistente de un evento deportivo al aire libre. Redacta en segundo persona (trato de tú) un briefing claro y operativo para este voluntario, en español, de entre 80 y 140 palabras.
+
+REGLAS IMPORTANTES:
+1. Si el campo "descripcion_del_organizador" de algún punto contiene texto, **respeta su contenido íntegro** y úsalo como núcleo del briefing. Solo puedes mejorar la redacción o la claridad semántica, nunca suprimir ni inventar información.
+2. Si "notas_del_organizador" del voluntario contiene texto, intégralo con el mismo criterio.
+3. Si los campos están vacíos, redacta tú un briefing adecuado al tipo de punto y al rol del voluntario.
+4. Menciona explícitamente la posición (nombre del punto y km si aplica) y al responsable de zona si lo hay.
+5. No inventes datos que no estén en el contexto. No añadas disclaimers ni líneas en blanco. No uses markdown ni comillas.
+6. Termina con una frase corta de coordinación (a quién avisar ante cualquier incidencia).
+
+CONTEXTO (JSON):
+${JSON.stringify(context, null, 2)}
+
+Devuelve solo el texto final del briefing.`
+
+  try {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.4, maxOutputTokens: 400 },
+      }),
+    })
+    if (!resp.ok) {
+      const errText = await resp.text().catch(() => '')
+      console.error('[trackops-sync] gemini error', resp.status, errText.slice(0, 400))
+      throw new Error(`gemini ${resp.status}`)
+    }
+    const data = await resp.json()
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text
+    if (typeof text !== 'string' || text.trim().length === 0) {
+      throw new Error('gemini empty response')
+    }
+    return text.trim()
+  } catch (err) {
+    console.error('[trackops-sync] ai fallback:', err.message ?? err)
+    throw err
+  }
+}
+
 const server = http.createServer(async (req, res) => {
   const origin = req.headers.origin
   const url = new URL(req.url ?? '', 'http://localhost')
@@ -423,6 +501,32 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === '/api/events' && req.method === 'GET') {
       handleSse(req, res, origin)
       return
+    }
+
+    if (url.pathname === '/api/ai/describe' && req.method === 'POST') {
+      if (!GEMINI_API_KEY) {
+        return json(res, 501, { error: 'AI not configured' }, origin)
+      }
+      const body = await readBody(req)
+      const projectId = body?.projectId
+      const volunteerId = body?.volunteerId
+      if (!projectId || !volunteerId) {
+        return json(res, 400, { error: 'projectId y volunteerId requeridos' }, origin)
+      }
+      const project = await loadProject(projectId)
+      if (!project) return json(res, 404, { error: 'proyecto no encontrado' }, origin)
+      const volunteer = (project.volunteers ?? []).find((v) => v.id === volunteerId)
+      if (!volunteer) return json(res, 404, { error: 'voluntario no encontrado' }, origin)
+
+      const cacheKey = `${projectId}:${volunteerId}:${project.updatedAt}`
+      const cached = aiCache.get(cacheKey)
+      if (cached && cached.exp > Date.now()) {
+        return json(res, 200, { text: cached.text, cached: true }, origin)
+      }
+
+      const text = await generateDescription(project, volunteer)
+      aiCache.set(cacheKey, { text, exp: Date.now() + AI_CACHE_TTL_MS })
+      return json(res, 200, { text }, origin)
     }
 
     res.writeHead(404, corsHeaders(origin))

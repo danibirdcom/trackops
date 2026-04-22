@@ -3,6 +3,7 @@ import L from 'leaflet'
 import type { Project } from '@/lib/types'
 import { positionAtKm } from '@/lib/geo/positionAtKm'
 import { computeRaceBounds, runnerKmAt } from '@/lib/race/simulation'
+import { useUiStore } from '@/stores/uiStore'
 
 type Props = {
   project: Project
@@ -52,6 +53,7 @@ function sweeperIcon(label: string, color: string): L.DivIcon {
 }
 
 export default function VolunteerActionsLayer({ project, currentMs }: Props) {
+  const focusVolunteerId = useUiStore((s) => s.focusVolunteerId)
   if (currentMs === null) return null
 
   const volunteerById = new Map(project.volunteers.map((v) => [v.id, v]))
@@ -63,6 +65,7 @@ export default function VolunteerActionsLayer({ project, currentMs }: Props) {
     if (origin.kmMark === null) continue
     for (const [volunteerId, action] of Object.entries(origin.volunteerActions)) {
       if (action.type !== 'sweeper') continue
+      if (focusVolunteerId && volunteerId !== focusVolunteerId) continue
       const track = trackById.get(action.trackId)
       if (!track) continue
       const bounds = computeRaceBounds(track)

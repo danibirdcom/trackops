@@ -14,6 +14,8 @@ Environment=TRACKOPS_DATA_DIR=/opt/trackops/data
 # La autenticación es por contraseña de proyecto (ver POST /api/projects/:id/password).
 # Si quieres un gate global adicional, define TRACKOPS_TOKEN aquí; si no, déjalo sin
 # establecer: las lecturas son públicas y las escrituras requieren contraseña.
+# Opcional: añade GEMINI_API_KEY=... en /etc/trackops/env para activar el briefing IA.
+EnvironmentFile=-/etc/trackops/env
 ExecStart=/usr/bin/node index.js
 Restart=on-failure
 RestartSec=5

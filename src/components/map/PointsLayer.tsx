@@ -57,10 +57,15 @@ export default function PointsLayer({ points }: Props) {
   const updatePoint = useProjectStore((s) => s.updatePoint)
   const current = useProjectStore((s) => s.current)
   const readOnly = useUiStore((s) => s.readOnly)
+  const focusVolunteerId = useUiStore((s) => s.focusVolunteerId)
+
+  const visiblePoints = focusVolunteerId
+    ? points.filter((p) => p.volunteerIds.includes(focusVolunteerId))
+    : points
 
   return (
     <>
-      {points.map((pt) => (
+      {visiblePoints.map((pt) => (
         <Marker
           key={pt.id}
           position={pt.coordinates}

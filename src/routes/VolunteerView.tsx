@@ -26,6 +26,7 @@ import {
   describeVolunteerRole,
   type RoleDescriptionContext,
 } from '@/lib/ai/describeVolunteer'
+import { fetchAIDescription } from '@/lib/ai/client'
 import { aggregateRaceWindow } from '@/lib/race/simulation'
 
 export default function VolunteerView() {
@@ -35,6 +36,7 @@ export default function VolunteerView() {
   const selectPoint = useProjectStore((s) => s.selectPoint)
   const setReadOnly = useUiStore((s) => s.setReadOnly)
   const requestFlyTo = useUiStore((s) => s.requestFlyTo)
+  const setFocusVolunteerId = useUiStore((s) => s.setFocusVolunteerId)
   const simulationActive = useSimulationStore((s) => s.active)
   const setSimulationActive = useSimulationStore((s) => s.setActive)
   const setSimulationCurrentMs = useSimulationStore((s) => s.setCurrentMs)
@@ -49,8 +51,17 @@ export default function VolunteerView() {
     return () => {
       setReadOnly(false)
       setProject(null)
+      setFocusVolunteerId(null)
     }
-  }, [setReadOnly, setProject])
+  }, [setReadOnly, setProject, setFocusVolunteerId])
+
+  useEffect(() => {
+    if (simulationActive && volunteerId) {
+      setFocusVolunteerId(volunteerId)
+    } else {
+      setFocusVolunteerId(null)
+    }
+  }, [simulationActive, volunteerId, setFocusVolunteerId])
 
   useEffect(() => {
     if (!projectId) return
@@ -77,6 +88,27 @@ export default function VolunteerView() {
     if (!current || !volunteerId) return null
     return buildRoleDescriptionContext(current, volunteerId)
   }, [current, volunteerId])
+
+  const fallbackDescription = useMemo(
+    () => (ctx ? describeVolunteerRole(ctx) : ''),
+    [ctx],
+  )
+  const [aiDescription, setAiDescription] = useState<string | null>(null)
+  const [aiLoading, setAiLoading] = useState(false)
+
+  useEffect(() => {
+    if (!ctx || !projectId || !volunteerId || !syncEnabled) return
+    let cancelled = false
+    setAiLoading(true)
+    void fetchAIDescription(projectId, volunteerId).then((text) => {
+      if (cancelled) return
+      setAiDescription(text)
+      setAiLoading(false)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [ctx, projectId, volunteerId, syncEnabled])
 
   useEffect(() => {
     if (!ctx) return
@@ -117,7 +149,8 @@ export default function VolunteerView() {
   }
 
   const { volunteer, points, sectors, peers, chiefByVolunteer } = ctx
-  const description = describeVolunteerRole(ctx)
+  const description = aiDescription ?? fallbackDescription
+  const aiSource = aiDescription ? 'ai' : aiLoading ? 'loading' : 'fallback'
   const window = aggregateRaceWindow(current.tracks)
   const canSimulate = Boolean(window)
 
@@ -174,8 +207,14 @@ export default function VolunteerView() {
           <section className="rounded-md border border-border bg-muted/30 p-3">
             <p className="mb-1 flex items-center gap-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
               <Sparkles className="size-3" /> Tu cometido
+              {aiSource === 'loading' && (
+                <span className="ml-1 text-[10px] italic">(preparando con IA…)</span>
+              )}
+              {aiSource === 'ai' && (
+                <span className="ml-1 rounded-full bg-primary/15 px-1.5 py-0.5 text-[9px] uppercase text-primary">IA</span>
+              )}
             </p>
-            <p className="text-[13px] leading-snug">{description}</p>
+            <p className="text-[13px] leading-snug whitespace-pre-line">{description}</p>
           </section>
 
           {points.length > 0 && (

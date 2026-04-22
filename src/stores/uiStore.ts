@@ -25,6 +25,7 @@ type UiStore = {
   drawPoints: [number, number][]
   selectedSectorId: string | null
   readOnly: boolean
+  focusVolunteerId: string | null
   toggleSidebar: () => void
   setActiveTab: (tab: SidebarTab) => void
   toggleDarkMode: () => void
@@ -35,6 +36,7 @@ type UiStore = {
   clearDraw: () => void
   selectSector: (id: string | null) => void
   setReadOnly: (v: boolean) => void
+  setFocusVolunteerId: (id: string | null) => void
 }
 
 export const useUiStore = create<UiStore>((set) => ({
@@ -47,6 +49,7 @@ export const useUiStore = create<UiStore>((set) => ({
   drawPoints: [],
   selectedSectorId: null,
   readOnly: false,
+  focusVolunteerId: null,
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
   setActiveTab: (tab) => set({ activeTab: tab }),
   toggleDarkMode: () => set((s) => ({ darkMode: !s.darkMode })),
@@ -57,4 +60,5 @@ export const useUiStore = create<UiStore>((set) => ({
   clearDraw: () => set({ drawMode: null, drawPoints: [] }),
   selectSector: (id) => set({ selectedSectorId: id }),
   setReadOnly: (v) => set({ readOnly: v }),
+  setFocusVolunteerId: (id) => set({ focusVolunteerId: id }),
 }))

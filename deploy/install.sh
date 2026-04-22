@@ -48,6 +48,12 @@ npm run build
 log "5/7 deploy static files to $WWW_ROOT"
 sudo mkdir -p "$WWW_ROOT"
 sudo rsync -a --delete "$REPO_DIR/dist/" "$WWW_ROOT/"
+# Stamp a unique build version into the service worker so each deploy
+# invalidates the previous cache on activate.
+BUILD_VERSION="$(date -u +%Y%m%d%H%M%S)-$(openssl rand -hex 3)"
+if [ -f "$WWW_ROOT/sw.js" ]; then
+  sudo sed -i "s|__TRACKOPS_BUILD__|$BUILD_VERSION|g" "$WWW_ROOT/sw.js"
+fi
 sudo chown -R www-data:www-data "$WWW_ROOT"
 
 log "6/7 sync server + systemd unit"

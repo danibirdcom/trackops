@@ -1,7 +1,8 @@
 /* TrackOps service worker — app shell + tile runtime cache */
 
-const SHELL_CACHE = 'trackops-shell-v1'
-const ASSET_CACHE = 'trackops-assets-v1'
+const BUILD_VERSION = '__TRACKOPS_BUILD__'
+const SHELL_CACHE = `trackops-shell-${BUILD_VERSION}`
+const ASSET_CACHE = `trackops-assets-${BUILD_VERSION}`
 const TILE_CACHE = 'trackops-tiles-v1'
 const TILE_CACHE_MAX = 2000
 

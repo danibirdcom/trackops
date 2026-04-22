@@ -17,6 +17,8 @@ const POINT_TYPE_INSTRUCTIONS: Record<string, string> = {
     'Punto de paso general. Anima a los corredores, confirma que siguen la ruta correcta y no permitas que se desvíen en cruces o caminos secundarios.',
   voluntario:
     'Punto de apoyo general de voluntariado. Orienta a los corredores, atiende peticiones puntuales, y mantén comunicación constante con el responsable de zona ante cualquier incidencia.',
+  escoba:
+    'Eres escoba de la carrera: cerrarás el recorrido acompañando al último corredor. Mantén comunicación constante con dirección de carrera, recoge señalización a medida que avanzas si corresponde, y atiende retiradas y primeros auxilios básicos hasta que llegue refuerzo si hace falta.',
   guardarropa:
     'Guardarropa. Recibe y etiqueta bolsas con el dorsal del corredor. No entregues ninguna bolsa sin el dorsal correspondiente del usuario.',
   parking:

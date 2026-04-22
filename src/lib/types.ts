@@ -9,6 +9,7 @@ export type PointType =
   | 'salida'
   | 'paso'
   | 'voluntario'
+  | 'escoba'
   | 'guardarropa'
   | 'parking'
   | 'baños'

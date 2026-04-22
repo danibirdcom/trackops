@@ -16,6 +16,7 @@ const POINT_META: Record<PointType, { emoji: string; color: string }> = {
   salida: { emoji: '🚩', color: '#16a34a' },
   paso: { emoji: '📍', color: '#6366f1' },
   voluntario: { emoji: '🧑', color: '#14b8a6' },
+  escoba: { emoji: '🧹', color: '#92400e' },
   guardarropa: { emoji: '🎒', color: '#8b5cf6' },
   parking: { emoji: '🅿️', color: '#64748b' },
   baños: { emoji: '🚻', color: '#0891b2' },

@@ -9,6 +9,7 @@ export const POINT_TYPE_LABELS: Record<PointType, string> = {
   salida: 'Salida',
   paso: 'Paso',
   voluntario: 'Voluntario',
+  escoba: 'Escoba',
   guardarropa: 'Guardarropa',
   parking: 'Parking',
   baños: 'Baños',

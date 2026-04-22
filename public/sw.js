@@ -6,9 +6,9 @@ const TILE_CACHE = 'trackops-tiles-v1'
 const TILE_CACHE_MAX = 2000
 
 const TILE_HOST_PATTERNS = [
-  /^https:\/\/([a-z]\.)?tile\.openstreetmap\.org\//,
-  /^https:\/\/([a-z]\.)?tile\.opentopomap\.org\//,
   /^https:\/\/([a-z]\.)?basemaps\.cartocdn\.com\//,
+  /^https:\/\/([a-z]\.)?tile\.opentopomap\.org\//,
+  /^https:\/\/([a-z]\.)?tile\.openstreetmap\.org\//,
 ]
 
 const SHELL_URLS = ['/', '/index.html']

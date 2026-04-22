@@ -89,6 +89,17 @@ export class RestSyncAdapter implements SyncAdapter {
     return (await res.json()) as SessionToken
   }
 
+  async clearPassword(projectId: string, sessionToken: string): Promise<void> {
+    const res = await fetch(
+      `${this.config.endpoint}/api/projects/${encodeURIComponent(projectId)}/password`,
+      {
+        method: 'DELETE',
+        headers: baseHeaders(this.config, sessionToken),
+      },
+    )
+    if (!res.ok) throw new Error(await readError(res))
+  }
+
   async setPassword(
     projectId: string,
     newPassword: string,

@@ -47,6 +47,7 @@ export interface SyncAdapter {
     newPassword: string,
     opts?: { currentPassword?: string; sessionToken?: string | null },
   ): Promise<SessionToken>
+  clearPassword(projectId: string, sessionToken: string): Promise<void>
   subscribe(
     projectId: string,
     handler: (event: SyncEvent) => void,

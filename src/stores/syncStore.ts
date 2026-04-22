@@ -54,6 +54,7 @@ type SyncStore = {
     newPassword: string,
     currentPassword?: string,
   ) => Promise<SessionToken>
+  clearProjectPassword: (projectId: string) => Promise<void>
 }
 
 function buildAdapter(config: SyncConfig): SyncAdapter | null {
@@ -263,6 +264,15 @@ export const useSyncStore = create<SyncStore>((set, get) => {
       })
       SessionStore.save(projectId, session)
       return session
+    },
+
+    clearProjectPassword: async (projectId) => {
+      const adapter = get().adapter
+      if (!adapter) throw new Error('Sincronización no disponible')
+      const session = SessionStore.getValid(projectId)
+      if (!session) throw new Error('Inicia sesión antes de quitar la contraseña')
+      await adapter.clearPassword(projectId, session)
+      SessionStore.drop(projectId)
     },
   }
 })

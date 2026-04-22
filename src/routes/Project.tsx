@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Menu, Moon, ArrowLeft, Share2, Layers, WifiOff, Cloud, Play } from 'lucide-react'
+import { Menu, Moon, ArrowLeft, Share2, Layers, WifiOff, Cloud, Play, Lock } from 'lucide-react'
 import MapCanvas from '@/components/map/MapCanvas'
 import Sidebar from '@/components/sidebar/Sidebar'
 import PointDetails from '@/components/sidebar/PointDetails'
 import ExportDialog from '@/components/dialogs/ExportDialog'
 import OfflineDialog from '@/components/dialogs/OfflineDialog'
 import SyncDialog from '@/components/dialogs/SyncDialog'
+import SecurityDialog from '@/components/dialogs/SecurityDialog'
 import SimulationBar from '@/components/SimulationBar'
 import AddressSearch from '@/components/map/AddressSearch'
 import { useUiStore } from '@/stores/uiStore'
@@ -33,6 +34,7 @@ export default function Project() {
   const [exportOpen, setExportOpen] = useState(false)
   const [offlineOpen, setOfflineOpen] = useState(false)
   const [syncOpen, setSyncOpen] = useState(false)
+  const [securityOpen, setSecurityOpen] = useState(false)
   const syncEnabled = useSyncStore((s) => s.enabled)
   const syncStatus = useSyncStore((s) => s.status)
   const syncError = useSyncStore((s) => s.statusError)
@@ -170,6 +172,15 @@ export default function Project() {
           </button>
           <button
             type="button"
+            onClick={() => setSecurityOpen(true)}
+            className="inline-flex size-9 items-center justify-center rounded-md hover:bg-accent"
+            aria-label="Seguridad del proyecto"
+            title="Contraseña del proyecto"
+          >
+            <Lock className="size-4" />
+          </button>
+          <button
+            type="button"
             onClick={() => setSyncOpen(true)}
             className="relative inline-flex size-9 items-center justify-center rounded-md hover:bg-accent"
             aria-label="Sincronización"
@@ -229,6 +240,7 @@ export default function Project() {
       {exportOpen && <ExportDialog project={current} onClose={() => setExportOpen(false)} />}
       {offlineOpen && <OfflineDialog project={current} onClose={() => setOfflineOpen(false)} />}
       {syncOpen && <SyncDialog onClose={() => setSyncOpen(false)} />}
+      {securityOpen && <SecurityDialog project={current} onClose={() => setSecurityOpen(false)} />}
     </div>
   )
 }

@@ -79,13 +79,11 @@ export default function MapCanvas() {
       ? 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png'
       : darkMode
         ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'
-        : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+        : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png'
   const attribution =
     baseLayer === 'topo'
       ? '&copy; <a href="https://opentopomap.org">OpenTopoMap</a>'
-      : darkMode
-        ? '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
-        : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+      : '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
 
   return (
     <div className="relative size-full">

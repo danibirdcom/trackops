@@ -17,7 +17,8 @@ import SimulationBar from '@/components/SimulationBar'
 import { useProjectStore } from '@/stores/projectStore'
 import { useUiStore } from '@/stores/uiStore'
 import { useSimulationStore } from '@/stores/simulationStore'
-import { getProject } from '@/lib/storage/dexie'
+import { useSyncStore } from '@/stores/syncStore'
+import { getProject, saveProject } from '@/lib/storage/dexie'
 import {
   buildRoleDescriptionContext,
   describeVolunteerRole,
@@ -35,6 +36,8 @@ export default function VolunteerView() {
   const simulationActive = useSimulationStore((s) => s.active)
   const setSimulationActive = useSimulationStore((s) => s.setActive)
   const setSimulationCurrentMs = useSimulationStore((s) => s.setCurrentMs)
+  const syncEnabled = useSyncStore((s) => s.enabled)
+  const pullNow = useSyncStore((s) => s.pullNow)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
 
@@ -51,7 +54,11 @@ export default function VolunteerView() {
     let cancelled = false
     void (async () => {
       setLoading(true)
-      const p = await getProject(projectId)
+      let p = (await getProject(projectId)) ?? null
+      if (!p && syncEnabled) {
+        p = await pullNow(projectId)
+        if (p) await saveProject(p)
+      }
       if (cancelled) return
       if (p) {
         setProject(p)
@@ -61,7 +68,7 @@ export default function VolunteerView() {
       }
       setLoading(false)
     })()
-  }, [projectId, setProject])
+  }, [projectId, setProject, syncEnabled, pullNow])
 
   const ctx = useMemo<RoleDescriptionContext | null>(() => {
     if (!current || !volunteerId) return null

@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Search, X, ArrowLeft, User } from 'lucide-react'
 import { useProjectStore } from '@/stores/projectStore'
-import { getProject } from '@/lib/storage/dexie'
+import { useSyncStore } from '@/stores/syncStore'
+import { getProject, saveProject } from '@/lib/storage/dexie'
 
 function normalise(s: string): string {
   return s
@@ -17,6 +18,8 @@ export default function VolunteerSearch() {
   const navigate = useNavigate()
   const current = useProjectStore((s) => s.current)
   const setProject = useProjectStore((s) => s.setProject)
+  const syncEnabled = useSyncStore((s) => s.enabled)
+  const pullNow = useSyncStore((s) => s.pullNow)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [query, setQuery] = useState('')
@@ -26,7 +29,11 @@ export default function VolunteerSearch() {
     let cancelled = false
     void (async () => {
       setLoading(true)
-      const p = await getProject(projectId)
+      let p = (await getProject(projectId)) ?? null
+      if (!p && syncEnabled) {
+        p = await pullNow(projectId)
+        if (p) await saveProject(p)
+      }
       if (cancelled) return
       if (p) {
         setProject(p)
@@ -39,7 +46,7 @@ export default function VolunteerSearch() {
     return () => {
       cancelled = true
     }
-  }, [projectId, setProject])
+  }, [projectId, setProject, syncEnabled, pullNow])
 
   const results = useMemo(() => {
     if (!current) return []

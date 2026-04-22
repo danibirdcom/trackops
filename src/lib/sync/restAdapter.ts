@@ -2,20 +2,34 @@ import type { Project } from '@/lib/types'
 import type {
   PresenceUser,
   RemoteProjectSummary,
+  SessionToken,
   SyncAdapter,
   SyncConfig,
   SyncEvent,
   SyncStatus,
 } from './types'
 
-function authHeaders(cfg: SyncConfig): HeadersInit {
+function baseHeaders(cfg: SyncConfig, sessionToken?: string | null): HeadersInit {
   const h: Record<string, string> = { 'Content-Type': 'application/json' }
-  if (cfg.token) h['Authorization'] = `Bearer ${cfg.token}`
+  if (sessionToken) {
+    h['Authorization'] = `Bearer ${sessionToken}`
+  } else if (cfg.token) {
+    h['Authorization'] = `Bearer ${cfg.token}`
+  }
   return h
 }
 
 function normalizeEndpoint(endpoint: string): string {
   return endpoint.replace(/\/$/, '')
+}
+
+async function readError(res: Response): Promise<string> {
+  try {
+    const data = (await res.json()) as { error?: string }
+    return data?.error ?? `HTTP ${res.status}`
+  } catch {
+    return `HTTP ${res.status}`
+  }
 }
 
 export class RestSyncAdapter implements SyncAdapter {
@@ -27,7 +41,7 @@ export class RestSyncAdapter implements SyncAdapter {
 
   async list(): Promise<RemoteProjectSummary[]> {
     const res = await fetch(`${this.config.endpoint}/api/projects`, {
-      headers: authHeaders(this.config),
+      headers: baseHeaders(this.config),
     })
     if (!res.ok) throw new Error(`No se pudo listar (${res.status})`)
     return (await res.json()) as RemoteProjectSummary[]
@@ -35,28 +49,63 @@ export class RestSyncAdapter implements SyncAdapter {
 
   async pull(id: string): Promise<Project | null> {
     const res = await fetch(`${this.config.endpoint}/api/projects/${encodeURIComponent(id)}`, {
-      headers: authHeaders(this.config),
+      headers: baseHeaders(this.config),
     })
     if (res.status === 404) return null
     if (!res.ok) throw new Error(`No se pudo descargar (${res.status})`)
     return (await res.json()) as Project
   }
 
-  async push(project: Project): Promise<void> {
-    const res = await fetch(`${this.config.endpoint}/api/projects/${encodeURIComponent(project.id)}`, {
-      method: 'PUT',
-      headers: authHeaders(this.config),
-      body: JSON.stringify(project),
-    })
-    if (!res.ok) throw new Error(`No se pudo subir (${res.status})`)
+  async push(project: Project, sessionToken?: string | null): Promise<void> {
+    const res = await fetch(
+      `${this.config.endpoint}/api/projects/${encodeURIComponent(project.id)}`,
+      {
+        method: 'PUT',
+        headers: baseHeaders(this.config, sessionToken),
+        body: JSON.stringify(project),
+      },
+    )
+    if (!res.ok) throw new Error(await readError(res))
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string, sessionToken?: string | null): Promise<void> {
     const res = await fetch(`${this.config.endpoint}/api/projects/${encodeURIComponent(id)}`, {
       method: 'DELETE',
-      headers: authHeaders(this.config),
+      headers: baseHeaders(this.config, sessionToken),
     })
-    if (!res.ok && res.status !== 404) throw new Error(`No se pudo borrar (${res.status})`)
+    if (!res.ok && res.status !== 404) throw new Error(await readError(res))
+  }
+
+  async login(projectId: string, password: string): Promise<SessionToken> {
+    const res = await fetch(
+      `${this.config.endpoint}/api/projects/${encodeURIComponent(projectId)}/auth/login`,
+      {
+        method: 'POST',
+        headers: baseHeaders(this.config),
+        body: JSON.stringify({ password }),
+      },
+    )
+    if (!res.ok) throw new Error(await readError(res))
+    return (await res.json()) as SessionToken
+  }
+
+  async setPassword(
+    projectId: string,
+    newPassword: string,
+    opts: { currentPassword?: string; sessionToken?: string | null } = {},
+  ): Promise<SessionToken> {
+    const body: Record<string, string> = { newPassword }
+    if (opts.currentPassword) body.currentPassword = opts.currentPassword
+    const res = await fetch(
+      `${this.config.endpoint}/api/projects/${encodeURIComponent(projectId)}/password`,
+      {
+        method: 'POST',
+        headers: baseHeaders(this.config, opts.sessionToken),
+        body: JSON.stringify(body),
+      },
+    )
+    if (!res.ok) throw new Error(await readError(res))
+    return (await res.json()) as SessionToken
   }
 
   subscribe(

@@ -55,15 +55,10 @@ sudo mkdir -p "$DATA_DIR"
 sudo rsync -a --delete "$REPO_DIR/server/" "$SERVER_DIR/"
 sudo chown -R trackops:trackops "$SERVER_DIR" "$DATA_DIR"
 
-if [ ! -f "$SYNC_UNIT" ]; then
-  SYNC_TOKEN="$(openssl rand -hex 24)"
-  sudo cp "$REPO_DIR/deploy/trackops-sync.service" "$SYNC_UNIT"
-  sudo sed -i "s|cambiame-por-un-token-largo-aleatorio|$SYNC_TOKEN|" "$SYNC_UNIT"
-  echo "GENERATED_TOKEN=$SYNC_TOKEN" | sudo tee "$APP_ROOT/sync-token.txt" >/dev/null
-  sudo chmod 600 "$APP_ROOT/sync-token.txt"
-fi
+sudo cp "$REPO_DIR/deploy/trackops-sync.service" "$SYNC_UNIT"
 sudo systemctl daemon-reload
-sudo systemctl enable --now trackops-sync
+sudo systemctl enable trackops-sync >/dev/null
+sudo systemctl restart trackops-sync
 sleep 1
 sudo systemctl status trackops-sync --no-pager | head -6 || true
 
@@ -117,5 +112,5 @@ else
   echo
   echo " Después vuelve a ejecutar este install.sh para activar HTTPS."
 fi
-echo " Sync token en $APP_ROOT/sync-token.txt (solo root)."
+echo " Auth: contraseña por proyecto (se define al crear cada proyecto)."
 echo "=========================================================="

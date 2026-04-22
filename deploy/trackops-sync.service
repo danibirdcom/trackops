@@ -11,8 +11,9 @@ WorkingDirectory=/opt/trackops/server
 Environment=NODE_ENV=production
 Environment=PORT=8787
 Environment=TRACKOPS_DATA_DIR=/opt/trackops/data
-# Cambia el token antes de activar la unidad
-Environment=TRACKOPS_TOKEN=cambiame-por-un-token-largo-aleatorio
+# La autenticación es por contraseña de proyecto (ver POST /api/projects/:id/password).
+# Si quieres un gate global adicional, define TRACKOPS_TOKEN aquí; si no, déjalo sin
+# establecer: las lecturas son públicas y las escrituras requieren contraseña.
 ExecStart=/usr/bin/node index.js
 Restart=on-failure
 RestartSec=5

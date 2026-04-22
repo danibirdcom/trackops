@@ -10,9 +10,11 @@ import {
   loadSyncConfig,
   saveSyncConfig,
 } from '@/lib/sync/config'
+import { SessionStore } from '@/lib/sync/sessions'
 import type {
   PresenceUser,
   RemoteProjectSummary,
+  SessionToken,
   SyncAdapter,
   SyncConfig,
   SyncStatus,
@@ -44,6 +46,14 @@ type SyncStore = {
   subscribeProject: (id: string) => void
   unsubscribeProject: () => void
   schedulePush: (project: Project) => void
+  getSessionToken: (projectId: string) => string | null
+  login: (projectId: string, password: string) => Promise<SessionToken>
+  logout: (projectId: string) => void
+  setProjectPassword: (
+    projectId: string,
+    newPassword: string,
+    currentPassword?: string,
+  ) => Promise<SessionToken>
 }
 
 function buildAdapter(config: SyncConfig): SyncAdapter | null {
@@ -117,15 +127,17 @@ export const useSyncStore = create<SyncStore>((set, get) => {
     pushNow: async (project) => {
       const adapter = get().adapter
       if (!adapter) return
+      const token = SessionStore.getValid(project.id)
       set({ pending: true, statusError: null, suppressPushKey: project.updatedAt })
       try {
-        await adapter.push(project)
+        await adapter.push(project, token)
         set({ lastPushAt: Date.now(), pending: false })
       } catch (e) {
-        set({
-          pending: false,
-          statusError: e instanceof Error ? e.message : 'Error subiendo al servidor',
-        })
+        const msg = e instanceof Error ? e.message : 'Error subiendo al servidor'
+        if (/auth required|401/i.test(msg)) {
+          SessionStore.drop(project.id)
+        }
+        set({ pending: false, statusError: msg })
       }
     },
 
@@ -163,7 +175,9 @@ export const useSyncStore = create<SyncStore>((set, get) => {
     removeRemote: async (id) => {
       const adapter = get().adapter
       if (!adapter) return
-      await adapter.remove(id)
+      const token = SessionStore.getValid(id)
+      await adapter.remove(id, token)
+      SessionStore.drop(id)
       set({ remoteList: get().remoteList.filter((p) => p.id !== id) })
     },
 
@@ -223,6 +237,32 @@ export const useSyncStore = create<SyncStore>((set, get) => {
         void get().pushNow(latest)
       }, 1500)
       set({ pushTimer: timer })
+    },
+
+    getSessionToken: (projectId) => SessionStore.getValid(projectId),
+
+    login: async (projectId, password) => {
+      const adapter = get().adapter
+      if (!adapter) throw new Error('Sincronización no disponible')
+      const session = await adapter.login(projectId, password)
+      SessionStore.save(projectId, session)
+      return session
+    },
+
+    logout: (projectId) => {
+      SessionStore.drop(projectId)
+    },
+
+    setProjectPassword: async (projectId, newPassword, currentPassword) => {
+      const adapter = get().adapter
+      if (!adapter) throw new Error('Sincronización no disponible')
+      const existing = SessionStore.getValid(projectId)
+      const session = await adapter.setPassword(projectId, newPassword, {
+        currentPassword,
+        sessionToken: existing,
+      })
+      SessionStore.save(projectId, session)
+      return session
     },
   }
 })

@@ -11,6 +11,15 @@ export type RemoteProjectSummary = {
   name: string
   updatedAt: string
   size: number
+  eventDate?: string | null
+  trackCount?: number
+  volunteerCount?: number
+  protected?: boolean
+}
+
+export type SessionToken = {
+  token: string
+  exp: number
 }
 
 export type PresenceUser = {
@@ -30,8 +39,14 @@ export interface SyncAdapter {
   readonly config: SyncConfig
   list(): Promise<RemoteProjectSummary[]>
   pull(id: string): Promise<Project | null>
-  push(project: Project): Promise<void>
-  remove(id: string): Promise<void>
+  push(project: Project, sessionToken?: string | null): Promise<void>
+  remove(id: string, sessionToken?: string | null): Promise<void>
+  login(projectId: string, password: string): Promise<SessionToken>
+  setPassword(
+    projectId: string,
+    newPassword: string,
+    opts?: { currentPassword?: string; sessionToken?: string | null },
+  ): Promise<SessionToken>
   subscribe(
     projectId: string,
     handler: (event: SyncEvent) => void,

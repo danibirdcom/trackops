@@ -15,6 +15,8 @@ const POINT_TYPE_INSTRUCTIONS: Record<string, string> = {
     'Zona de salida. Ordena a los corredores por cajones, controla que no haya corredores sin dorsal, y mantén despejado el pasillo central. Sigue las indicaciones del director de carrera para el pistoletazo.',
   paso:
     'Punto de paso general. Anima a los corredores, confirma que siguen la ruta correcta y no permitas que se desvíen en cruces o caminos secundarios.',
+  voluntario:
+    'Punto de apoyo general de voluntariado. Orienta a los corredores, atiende peticiones puntuales, y mantén comunicación constante con el responsable de zona ante cualquier incidencia.',
   guardarropa:
     'Guardarropa. Recibe y etiqueta bolsas con el dorsal del corredor. No entregues ninguna bolsa sin el dorsal correspondiente del usuario.',
   parking:

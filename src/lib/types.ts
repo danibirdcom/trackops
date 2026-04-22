@@ -8,6 +8,7 @@ export type PointType =
   | 'meta'
   | 'salida'
   | 'paso'
+  | 'voluntario'
   | 'guardarropa'
   | 'parking'
   | 'baños'

@@ -11,6 +11,8 @@ import {
   Play,
   Users,
   AlertTriangle,
+  ChevronsLeft,
+  UserRound,
 } from 'lucide-react'
 import MapCanvas from '@/components/map/MapCanvas'
 import SimulationBar from '@/components/SimulationBar'
@@ -40,6 +42,7 @@ export default function VolunteerView() {
   const pullNow = useSyncStore((s) => s.pullNow)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
+  const [panelOpen, setPanelOpen] = useState(true)
 
   useEffect(() => {
     setReadOnly(true)
@@ -121,7 +124,10 @@ export default function VolunteerView() {
   const toggleSim = () => {
     const next = !simulationActive
     setSimulationActive(next)
-    if (next && window) setSimulationCurrentMs(window.startMs)
+    if (next) {
+      setPanelOpen(false)
+      if (window) setSimulationCurrentMs(window.startMs)
+    }
   }
 
   return (
@@ -155,7 +161,16 @@ export default function VolunteerView() {
       </header>
 
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
+        {panelOpen && (
         <aside className="flex max-h-[60vh] w-full shrink-0 flex-col gap-3 overflow-auto border-b border-border bg-background p-3 text-sm md:max-h-none md:w-96 md:border-b-0 md:border-r">
+          <button
+            type="button"
+            onClick={() => setPanelOpen(false)}
+            className="inline-flex items-center justify-center gap-1 self-end rounded-md border border-border px-2 py-1 text-[11px] hover:bg-accent"
+            aria-label="Ocultar ficha"
+          >
+            <ChevronsLeft className="size-3" /> Ocultar ficha
+          </button>
           <section className="rounded-md border border-border bg-muted/30 p-3">
             <p className="mb-1 flex items-center gap-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
               <Sparkles className="size-3" /> Tu cometido
@@ -290,10 +305,21 @@ export default function VolunteerView() {
             </section>
           )}
         </aside>
+        )}
 
         <main className="relative min-h-0 flex-1">
           <MapCanvas />
           <SimulationBar />
+          {!panelOpen && (
+            <button
+              type="button"
+              onClick={() => setPanelOpen(true)}
+              className="pointer-events-auto absolute left-2 top-2 z-[1000] inline-flex items-center gap-1 rounded-full border border-border bg-background/95 px-3 py-1.5 text-xs font-medium shadow-md backdrop-blur hover:bg-accent"
+              aria-label="Ver mi ficha"
+            >
+              <UserRound className="size-3.5" /> Ver mi ficha
+            </button>
+          )}
         </main>
       </div>
     </div>

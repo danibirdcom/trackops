@@ -36,7 +36,7 @@ export default function PointDetails() {
     .filter((v): v is Volunteer => Boolean(v))
 
   return (
-    <aside className="flex h-full w-80 shrink-0 flex-col border-l border-border bg-background">
+    <aside className="flex h-full w-full shrink-0 flex-col border-l border-border bg-background md:w-80">
       <header className="flex items-center gap-2 border-b border-border p-2">
         <p className="flex-1 text-sm font-semibold">Detalle del punto</p>
         <button

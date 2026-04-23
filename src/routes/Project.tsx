@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Menu, Moon, ArrowLeft, Share2, Layers, WifiOff, Cloud, Play, Lock, Shield } from 'lucide-react'
+import { Menu, Moon, ArrowLeft, Share2, Layers, WifiOff, Cloud, Play, Lock, Shield, MoreVertical } from 'lucide-react'
 import MapCanvas from '@/components/map/MapCanvas'
 import Sidebar from '@/components/sidebar/Sidebar'
 import PointDetails from '@/components/sidebar/PointDetails'
@@ -36,6 +36,7 @@ export default function Project() {
   const [offlineOpen, setOfflineOpen] = useState(false)
   const [syncOpen, setSyncOpen] = useState(false)
   const [securityOpen, setSecurityOpen] = useState(false)
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false)
   const syncEnabled = useSyncStore((s) => s.enabled)
   const syncStatus = useSyncStore((s) => s.status)
   const syncError = useSyncStore((s) => s.statusError)
@@ -103,7 +104,7 @@ export default function Project() {
   }
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col overflow-hidden">
       {masterToken && (
         <div className="flex items-center gap-2 border-b border-destructive/30 bg-destructive/10 px-3 py-1 text-[11px] text-destructive">
           <Shield className="size-3" />
@@ -113,37 +114,28 @@ export default function Project() {
           </Link>
         </div>
       )}
-      <header className="flex items-center gap-2 border-b border-border bg-background px-3 py-2">
+      <header className="flex items-center gap-1 border-b border-border bg-background px-2 py-2 sm:gap-2 sm:px-3">
         <button
           type="button"
           onClick={toggleSidebar}
-          className="inline-flex size-9 items-center justify-center rounded-md hover:bg-accent"
+          className="inline-flex size-9 shrink-0 items-center justify-center rounded-md hover:bg-accent"
           aria-label={t('project.toggleSidebar')}
         >
           <Menu className="size-4" />
         </button>
-        <Link to="/" className="inline-flex size-9 items-center justify-center rounded-md hover:bg-accent" aria-label={t('project.back')}>
+        <Link to="/" className="inline-flex size-9 shrink-0 items-center justify-center rounded-md hover:bg-accent" aria-label={t('project.back')}>
           <ArrowLeft className="size-4" />
         </Link>
-        <div className="flex min-w-0 flex-col leading-tight">
+        <div className="flex min-w-0 flex-1 flex-col leading-tight">
           <span className="truncate text-sm font-semibold">{current.name}</span>
-          <span className="text-[11px] text-muted-foreground">
+          <span className="truncate text-[11px] text-muted-foreground">
             {current.eventDate ? new Date(current.eventDate).toLocaleDateString('es-ES') : 'Sin fecha'}
           </span>
         </div>
-        <div className="ml-auto flex items-center gap-1">
-          <div className="hidden sm:block">
+        <div className="flex shrink-0 items-center gap-0.5 sm:gap-1">
+          <div className="hidden lg:block">
             <AddressSearch />
           </div>
-          <button
-            type="button"
-            onClick={cycleBaseLayer}
-            className="inline-flex size-9 items-center justify-center rounded-md hover:bg-accent"
-            title={`Capa: ${current.mapState.baseLayer === 'osm' ? 'OSM' : 'Topo'}`}
-            aria-label={t('project.cycleBaseLayer')}
-          >
-            <Layers className="size-4" />
-          </button>
           {(() => {
             const window = aggregateRaceWindow(current.tracks)
             const canSimulate = Boolean(window)
@@ -174,8 +166,25 @@ export default function Project() {
           })()}
           <button
             type="button"
-            onClick={() => setOfflineOpen(true)}
+            onClick={() => setExportOpen(true)}
             className="inline-flex size-9 items-center justify-center rounded-md hover:bg-accent"
+            aria-label={t('project.openExport')}
+          >
+            <Share2 className="size-4" />
+          </button>
+          <button
+            type="button"
+            onClick={cycleBaseLayer}
+            className="hidden size-9 items-center justify-center rounded-md hover:bg-accent sm:inline-flex"
+            title={`Capa: ${current.mapState.baseLayer === 'osm' ? 'OSM' : 'Topo'}`}
+            aria-label={t('project.cycleBaseLayer')}
+          >
+            <Layers className="size-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setOfflineOpen(true)}
+            className="hidden size-9 items-center justify-center rounded-md hover:bg-accent sm:inline-flex"
             aria-label={t('project.openOffline')}
             title={t('project.openOffline')}
           >
@@ -184,7 +193,7 @@ export default function Project() {
           <button
             type="button"
             onClick={() => setSecurityOpen(true)}
-            className="inline-flex size-9 items-center justify-center rounded-md hover:bg-accent"
+            className="hidden size-9 items-center justify-center rounded-md hover:bg-accent sm:inline-flex"
             aria-label="Seguridad del proyecto"
             title="Contraseña del proyecto"
           >
@@ -193,7 +202,7 @@ export default function Project() {
           <button
             type="button"
             onClick={() => setSyncOpen(true)}
-            className="relative inline-flex size-9 items-center justify-center rounded-md hover:bg-accent"
+            className="relative hidden size-9 items-center justify-center rounded-md hover:bg-accent sm:inline-flex"
             aria-label="Sincronización"
             title="Sincronización"
           >
@@ -215,20 +224,83 @@ export default function Project() {
           </button>
           <button
             type="button"
-            onClick={() => setExportOpen(true)}
-            className="inline-flex size-9 items-center justify-center rounded-md hover:bg-accent"
-            aria-label={t('project.openExport')}
-          >
-            <Share2 className="size-4" />
-          </button>
-          <button
-            type="button"
             onClick={toggleDarkMode}
-            className="inline-flex size-9 items-center justify-center rounded-md hover:bg-accent"
+            className="hidden size-9 items-center justify-center rounded-md hover:bg-accent sm:inline-flex"
             aria-label={t('project.toggleDarkMode')}
           >
             <Moon className="size-4" />
           </button>
+          <div className="relative sm:hidden">
+            <button
+              type="button"
+              onClick={() => setMoreMenuOpen((v) => !v)}
+              className="inline-flex size-9 items-center justify-center rounded-md hover:bg-accent"
+              aria-label="Más acciones"
+            >
+              <MoreVertical className="size-4" />
+            </button>
+            {moreMenuOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setMoreMenuOpen(false)}
+                  aria-hidden
+                />
+                <div className="absolute right-0 top-full z-50 mt-1 w-56 overflow-hidden rounded-md border border-border bg-background shadow-lg">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMoreMenuOpen(false)
+                      cycleBaseLayer()
+                    }}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-accent"
+                  >
+                    <Layers className="size-4" /> Cambiar capa del mapa
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMoreMenuOpen(false)
+                      setOfflineOpen(true)
+                    }}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-accent"
+                  >
+                    <WifiOff className="size-4" /> {t('project.openOffline')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMoreMenuOpen(false)
+                      setSecurityOpen(true)
+                    }}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-accent"
+                  >
+                    <Lock className="size-4" /> Contraseña del proyecto
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMoreMenuOpen(false)
+                      setSyncOpen(true)
+                    }}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-accent"
+                  >
+                    <Cloud className="size-4" /> Sincronización
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMoreMenuOpen(false)
+                      toggleDarkMode()
+                    }}
+                    className="flex w-full items-center gap-2 border-t border-border px-3 py-2 text-sm hover:bg-accent"
+                  >
+                    <Moon className="size-4" /> {t('project.toggleDarkMode')}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </header>
 

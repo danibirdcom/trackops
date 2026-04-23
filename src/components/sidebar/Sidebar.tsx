@@ -22,7 +22,7 @@ export default function Sidebar() {
   const setActiveTab = useUiStore((s) => s.setActiveTab)
 
   return (
-    <aside className="flex h-full w-80 shrink-0 flex-col border-r border-border bg-background">
+    <aside className="flex h-full w-full shrink-0 flex-col border-r border-border bg-background md:w-80">
       <nav className="flex gap-1 border-b border-border p-2">
         {TABS.map((tab) => {
           const Icon = tab.icon

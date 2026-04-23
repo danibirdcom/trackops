@@ -82,6 +82,9 @@ export default function VolunteerView() {
       }
       setLoading(false)
     })()
+    return () => {
+      cancelled = true
+    }
   }, [projectId, setProject, syncEnabled, pullNow])
 
   const ctx = useMemo<RoleDescriptionContext | null>(() => {

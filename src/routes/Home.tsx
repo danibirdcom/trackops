@@ -147,7 +147,9 @@ export default function Home() {
   const openProject = async (entry: MergedEntry, forceReload = false) => {
     setError(null)
     let project = entry.local
-    if ((!project || forceReload) && syncEnabled) {
+    const remoteIsNewer =
+      entry.remote && project && entry.remote.updatedAt > project.updatedAt
+    if (syncEnabled && (forceReload || !project || remoteIsNewer)) {
       const remote = await pullNow(entry.id)
       if (remote) {
         await saveProject(remote)
@@ -244,14 +246,16 @@ export default function Home() {
     setError(null)
     setBusy(true)
     try {
-      await deleteProject(entry.id)
       if (entry.remote && syncEnabled) {
         if (entry.protected && !getSessionToken(entry.id)) {
-          setError(`"${entry.name}" tiene contraseña: abre el proyecto para autenticarte antes de borrarlo.`)
-        } else {
-          await useSyncStore.getState().removeRemote(entry.id)
+          setError(
+            `"${entry.name}" tiene contraseña: ábrelo como organizador para autenticarte antes de borrarlo.`,
+          )
+          return
         }
+        await useSyncStore.getState().removeRemote(entry.id)
       }
+      await deleteProject(entry.id)
       await reloadLocal()
       if (syncEnabled) await listRemote()
     } catch (e) {

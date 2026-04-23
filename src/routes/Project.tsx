@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Menu, Moon, ArrowLeft, Share2, Layers, WifiOff, Cloud, Play, Lock } from 'lucide-react'
+import { Menu, Moon, ArrowLeft, Share2, Layers, WifiOff, Cloud, Play, Lock, Shield } from 'lucide-react'
 import MapCanvas from '@/components/map/MapCanvas'
 import Sidebar from '@/components/sidebar/Sidebar'
 import PointDetails from '@/components/sidebar/PointDetails'
@@ -43,6 +43,7 @@ export default function Project() {
   const simulationActive = useSimulationStore((s) => s.active)
   const setSimulationActive = useSimulationStore((s) => s.setActive)
   const setSimulationCurrentMs = useSimulationStore((s) => s.setCurrentMs)
+  const masterToken = useSyncStore((s) => s.masterToken)
 
   useEffect(() => {
     if (!id) return
@@ -102,6 +103,15 @@ export default function Project() {
 
   return (
     <div className="flex h-full flex-col">
+      {masterToken && (
+        <div className="flex items-center gap-2 border-b border-destructive/30 bg-destructive/10 px-3 py-1 text-[11px] text-destructive">
+          <Shield className="size-3" />
+          <span>Modo administrador activo en este dispositivo. Todas las acciones se ejecutan sin validación de contraseña.</span>
+          <Link to="/admin" className="ml-auto underline hover:text-destructive/80">
+            Panel admin
+          </Link>
+        </div>
+      )}
       <header className="flex items-center gap-2 border-b border-border bg-background px-3 py-2">
         <button
           type="button"

@@ -69,6 +69,11 @@ if [ ! -f /etc/trackops/env ]; then
 # Regístrate en https://aistudio.google.com/app/apikey y descomenta la línea:
 # GEMINI_API_KEY=tu-clave-aqui
 # GEMINI_MODEL=gemini-2.0-flash
+
+# Opcional: token global de superadmin. Quien lo introduzca en /admin
+# podrá editar y borrar cualquier proyecto sin conocer la contraseña
+# del proyecto. No lo expongas fuera de este fichero.
+# TRACKOPS_ADMIN_TOKEN=token-largo-aleatorio
 ENVEOF
   sudo chmod 600 /etc/trackops/env
 fi
@@ -132,4 +137,7 @@ echo " Auth: contraseña por proyecto (se define al crear cada proyecto)."
 echo " IA: edita /etc/trackops/env y define GEMINI_API_KEY para activar"
 echo "     los briefings generados por Gemini en la vista de voluntario."
 echo "     Tras editar: sudo systemctl restart trackops-sync"
+echo " Superadmin: define TRACKOPS_ADMIN_TOKEN en /etc/trackops/env."
+echo "     Luego entra a https://<dominio>/admin con ese token para saltar"
+echo "     las contraseñas de proyecto y poder editar/borrar cualquiera."
 echo "=========================================================="

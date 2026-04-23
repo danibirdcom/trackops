@@ -17,6 +17,7 @@ import { randomUUID } from 'node:crypto'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const DATA_DIR = path.resolve(process.env.TRACKOPS_DATA_DIR ?? path.join(__dirname, 'data'))
 const LEGACY_TOKEN = process.env.TRACKOPS_TOKEN ?? null
+const ADMIN_TOKEN = process.env.TRACKOPS_ADMIN_TOKEN ?? null
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY ?? null
 const GEMINI_MODEL = process.env.GEMINI_MODEL ?? 'gemini-2.0-flash'
 const PORT = Number(process.env.PORT ?? 8787)
@@ -93,6 +94,19 @@ function bearerToken(req) {
   const auth = req.headers.authorization ?? ''
   const m = auth.match(/^Bearer\s+(.+)$/)
   return m ? m[1] : null
+}
+
+function isAdmin(req) {
+  if (!ADMIN_TOKEN) return false
+  const t = bearerToken(req)
+  if (!t) return false
+  try {
+    const a = Buffer.from(t, 'utf8')
+    const b = Buffer.from(ADMIN_TOKEN, 'utf8')
+    return a.length === b.length && crypto.timingSafeEqual(a, b)
+  } catch {
+    return false
+  }
 }
 
 function projectPath(id) {
@@ -410,6 +424,12 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, list, origin)
     }
 
+    if (url.pathname === '/api/admin/auth' && req.method === 'POST') {
+      if (!ADMIN_TOKEN) return json(res, 501, { error: 'admin not configured' }, origin)
+      if (!isAdmin(req)) return json(res, 401, { error: 'invalid admin token' }, origin)
+      return json(res, 200, { ok: true }, origin)
+    }
+
     const loginMatch = url.pathname.match(/^\/api\/projects\/([\w.-]+)\/auth\/login$/)
     if (loginMatch && req.method === 'POST') {
       const id = loginMatch[1]
@@ -442,7 +462,7 @@ const server = http.createServer(async (req, res) => {
         return json(res, 400, { error: 'password min 4 chars' }, origin)
       }
       const existing = await loadAuth(id)
-      if (existing) {
+      if (existing && !isAdmin(req)) {
         const token = bearerToken(req)
         const tokenOk = token && validateSession(token, id)
         const currentOk =
@@ -462,9 +482,11 @@ const server = http.createServer(async (req, res) => {
       const id = unprotectMatch[1]
       const existing = await loadAuth(id)
       if (!existing) return json(res, 200, { ok: true }, origin)
-      const token = bearerToken(req)
-      if (!token || !validateSession(token, id)) {
-        return json(res, 401, { error: 'auth required' }, origin)
+      if (!isAdmin(req)) {
+        const token = bearerToken(req)
+        if (!token || !validateSession(token, id)) {
+          return json(res, 401, { error: 'auth required' }, origin)
+        }
       }
       await deleteAuth(id)
       return json(res, 200, { ok: true }, origin)
@@ -484,7 +506,7 @@ const server = http.createServer(async (req, res) => {
           return json(res, 400, { error: 'invalid payload' }, origin)
         }
         const auth = await loadAuth(id)
-        if (auth) {
+        if (auth && !isAdmin(req)) {
           const token = bearerToken(req)
           if (!token || !validateSession(token, id)) {
             return json(res, 401, { error: 'auth required' }, origin)
@@ -496,7 +518,7 @@ const server = http.createServer(async (req, res) => {
       }
       if (req.method === 'DELETE') {
         const auth = await loadAuth(id)
-        if (auth) {
+        if (auth && !isAdmin(req)) {
           const token = bearerToken(req)
           if (!token || !validateSession(token, id)) {
             return json(res, 401, { error: 'auth required' }, origin)

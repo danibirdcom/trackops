@@ -55,11 +55,33 @@ type SyncStore = {
     currentPassword?: string,
   ) => Promise<SessionToken>
   clearProjectPassword: (projectId: string) => Promise<void>
+  masterToken: string | null
+  loginAsAdmin: (token: string) => Promise<boolean>
+  logoutAdmin: () => void
 }
 
 function buildAdapter(config: SyncConfig): SyncAdapter | null {
   if (!config.endpoint) return null
   return new RestSyncAdapter(config)
+}
+
+const MASTER_TOKEN_KEY = 'trackops.sync.masterToken'
+
+function loadMasterToken(): string | null {
+  try {
+    return localStorage.getItem(MASTER_TOKEN_KEY)
+  } catch {
+    return null
+  }
+}
+
+function persistMasterToken(token: string | null) {
+  try {
+    if (token) localStorage.setItem(MASTER_TOKEN_KEY, token)
+    else localStorage.removeItem(MASTER_TOKEN_KEY)
+  } catch {
+    /* ignore */
+  }
 }
 
 export const useSyncStore = create<SyncStore>((set, get) => {
@@ -74,6 +96,7 @@ export const useSyncStore = create<SyncStore>((set, get) => {
     lastPushAt: null,
     lastPullAt: null,
     pending: false,
+    masterToken: loadMasterToken(),
     remoteList: [],
     subscribedProjectId: null,
     unsubscribe: null,
@@ -128,14 +151,14 @@ export const useSyncStore = create<SyncStore>((set, get) => {
     pushNow: async (project) => {
       const adapter = get().adapter
       if (!adapter) return
-      const token = SessionStore.getValid(project.id)
+      const token = get().masterToken ?? SessionStore.getValid(project.id)
       set({ pending: true, statusError: null, suppressPushKey: project.updatedAt })
       try {
         await adapter.push(project, token)
         set({ lastPushAt: Date.now(), pending: false })
       } catch (e) {
         const msg = e instanceof Error ? e.message : 'Error subiendo al servidor'
-        if (/auth required|401/i.test(msg)) {
+        if (/auth required|401/i.test(msg) && !get().masterToken) {
           SessionStore.drop(project.id)
         }
         set({ pending: false, statusError: msg })
@@ -176,7 +199,7 @@ export const useSyncStore = create<SyncStore>((set, get) => {
     removeRemote: async (id) => {
       const adapter = get().adapter
       if (!adapter) return
-      const token = SessionStore.getValid(id)
+      const token = get().masterToken ?? SessionStore.getValid(id)
       await adapter.remove(id, token)
       SessionStore.drop(id)
       set({ remoteList: get().remoteList.filter((p) => p.id !== id) })
@@ -257,7 +280,7 @@ export const useSyncStore = create<SyncStore>((set, get) => {
     setProjectPassword: async (projectId, newPassword, currentPassword) => {
       const adapter = get().adapter
       if (!adapter) throw new Error('Sincronización no disponible')
-      const existing = SessionStore.getValid(projectId)
+      const existing = get().masterToken ?? SessionStore.getValid(projectId)
       const session = await adapter.setPassword(projectId, newPassword, {
         currentPassword,
         sessionToken: existing,
@@ -269,10 +292,30 @@ export const useSyncStore = create<SyncStore>((set, get) => {
     clearProjectPassword: async (projectId) => {
       const adapter = get().adapter
       if (!adapter) throw new Error('Sincronización no disponible')
-      const session = SessionStore.getValid(projectId)
+      const master = get().masterToken
+      const session = master ?? SessionStore.getValid(projectId)
       if (!session) throw new Error('Inicia sesión antes de quitar la contraseña')
       await adapter.clearPassword(projectId, session)
       SessionStore.drop(projectId)
+    },
+
+    loginAsAdmin: async (token) => {
+      const adapter = get().adapter
+      if (!adapter) throw new Error('Sincronización no disponible')
+      const endpoint = adapter.config.endpoint
+      const res = await fetch(`${endpoint}/api/admin/auth`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) return false
+      persistMasterToken(token)
+      set({ masterToken: token })
+      return true
+    },
+
+    logoutAdmin: () => {
+      persistMasterToken(null)
+      set({ masterToken: null })
     },
   }
 })

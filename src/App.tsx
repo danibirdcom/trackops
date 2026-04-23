@@ -5,6 +5,7 @@ import Project from '@/routes/Project'
 import SharedView from '@/routes/SharedView'
 import VolunteerSearch from '@/routes/VolunteerSearch'
 import VolunteerView from '@/routes/VolunteerView'
+import Admin from '@/routes/Admin'
 import { useUiStore } from '@/stores/uiStore'
 
 export default function App() {
@@ -20,6 +21,7 @@ export default function App() {
       <Route path="/project/:id" element={<Project />} />
       <Route path="/volunteer/:projectId" element={<VolunteerSearch />} />
       <Route path="/volunteer/:projectId/:volunteerId" element={<VolunteerView />} />
+      <Route path="/admin" element={<Admin />} />
       <Route path="/share" element={<SharedView />} />
       <Route path="/project/:id/share/:token" element={<SharedView />} />
     </Routes>

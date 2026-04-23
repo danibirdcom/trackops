@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import MapCanvas from '@/components/map/MapCanvas'
 import SimulationBar from '@/components/SimulationBar'
+import VolunteerChat from '@/components/VolunteerChat'
 import { useProjectStore } from '@/stores/projectStore'
 import { useUiStore } from '@/stores/uiStore'
 import { useSimulationStore } from '@/stores/simulationStore'
@@ -448,6 +449,13 @@ export default function VolunteerView() {
           )}
         </main>
       </div>
+      {projectId && volunteerId && (
+        <VolunteerChat
+          projectId={projectId}
+          volunteerId={volunteerId}
+          volunteerName={volunteer.name}
+        />
+      )}
     </div>
   )
 }

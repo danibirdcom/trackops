@@ -29,6 +29,7 @@ export default function Project() {
   const setProject = useProjectStore((s) => s.setProject)
   const setMapState = useProjectStore((s) => s.setMapState)
   const selectedPointId = useProjectStore((s) => s.selectedPointId)
+  const selectPoint = useProjectStore((s) => s.selectPoint)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
@@ -231,20 +232,34 @@ export default function Project() {
         </div>
       </header>
 
-      <div className="flex min-h-0 flex-1">
+      <div className="relative flex min-h-0 flex-1">
         {sidebarOpen && (
-          <div className="hidden md:block">
-            <Sidebar />
-          </div>
+          <>
+            <div
+              className="absolute inset-0 z-30 bg-black/40 md:hidden"
+              onClick={toggleSidebar}
+              aria-hidden
+            />
+            <div className="absolute inset-y-0 left-0 z-40 w-[85%] max-w-sm shadow-xl md:relative md:inset-auto md:z-auto md:w-auto md:max-w-none md:shadow-none">
+              <Sidebar />
+            </div>
+          </>
         )}
-        <main className="relative flex-1">
+        <main className="relative min-w-0 flex-1">
           <MapCanvas />
           <SimulationBar />
         </main>
         {selectedPointId && (
-          <div className="hidden lg:block">
-            <PointDetails />
-          </div>
+          <>
+            <div
+              className="absolute inset-0 z-30 bg-black/40 lg:hidden"
+              onClick={() => selectPoint(null)}
+              aria-hidden
+            />
+            <div className="absolute inset-y-0 right-0 z-40 w-[90%] max-w-sm shadow-xl lg:relative lg:inset-auto lg:z-auto lg:w-auto lg:max-w-none lg:shadow-none">
+              <PointDetails />
+            </div>
+          </>
         )}
       </div>
       {exportOpen && <ExportDialog project={current} onClose={() => setExportOpen(false)} />}

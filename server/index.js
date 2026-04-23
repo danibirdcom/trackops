@@ -339,6 +339,21 @@ async function generateDescription(project, volunteer) {
       if (chief) chiefs.push({ sector: clean(s.name, 120), name: clean(chief.name, 80) })
     }
   }
+  const isChief = sectors.some((s) => s.chiefVolunteerId === volunteer.id)
+  const peerIds = new Set()
+  for (const p of assignedPoints) {
+    for (const vid of p.volunteerIds ?? []) if (vid !== volunteer.id) peerIds.add(vid)
+  }
+  for (const s of sectors) {
+    for (const p of (project.points ?? []).filter((pt) => pt.sectorId === s.id)) {
+      for (const vid of p.volunteerIds ?? []) if (vid !== volunteer.id) peerIds.add(vid)
+    }
+  }
+  const peers = [...peerIds]
+    .map((id) => (project.volunteers ?? []).find((v) => v.id === id))
+    .filter(Boolean)
+    .map((v) => ({ nombre: clean(v.name, 80), rol: clean(v.role, 80) }))
+
   const context = {
     evento: clean(project.name, 120),
     voluntario: {
@@ -354,7 +369,9 @@ async function generateDescription(project, volunteer) {
     })),
     sectores: sectors.map((s) => ({ nombre: clean(s.name, 120), notas: clean(s.notes, 400) })),
     responsables_de_zona: chiefs,
-    es_responsable_de_sector: sectors.some((s) => s.chiefVolunteerId === volunteer.id),
+    es_responsable_de_sector: isChief,
+    equipo_a_cargo: isChief ? peers : [],
+    companeros_de_zona: !isChief ? peers : [],
   }
 
   const prompt = `Eres el asistente de un evento deportivo al aire libre. Redacta en segunda persona (trato de tú) un briefing claro y operativo para este voluntario, en español, de entre 80 y 140 palabras.
@@ -364,7 +381,7 @@ REGLAS IMPORTANTES:
 2. Si el campo "descripcion_del_organizador" de algún punto contiene texto, respeta su contenido íntegro y úsalo como núcleo del briefing. Solo puedes mejorar la redacción o la claridad semántica, nunca suprimir ni inventar información.
 3. Si "notas_del_organizador" del voluntario contiene texto, intégralo con el mismo criterio.
 4. Si los campos están vacíos, redacta tú un briefing adecuado al tipo de punto y al rol del voluntario.
-5. Menciona explícitamente la posición (nombre del punto y km si aplica) y al responsable de zona si lo hay.
+5. Menciona explícitamente la posición (nombre del punto y km si aplica) y al responsable de zona si lo hay. Si "es_responsable_de_sector" es true, menciona por nombre a las personas que tiene a su cargo ("equipo_a_cargo") y su papel de coordinación.
 6. No inventes datos que no estén en el contexto. No añadas disclaimers ni líneas en blanco. No uses markdown ni comillas.
 7. Termina con una frase corta de coordinación (a quién avisar ante cualquier incidencia).
 

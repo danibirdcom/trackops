@@ -95,12 +95,18 @@ export function describeVolunteerRole(ctx: RoleDescriptionContext): string {
     const chief = chiefByVolunteer.get(s.id)
     if (chief) chiefsList.push(`${chief.name} (${s.name})`)
   }
-  const chiefDesc =
-    sectors.some((s) => s.chiefVolunteerId === volunteer.id)
-      ? 'Eres responsable de tu sector — coordina al resto de voluntarios que trabajan contigo y reporta al director de carrera.'
-      : chiefsList.length > 0
-        ? `Tu responsable de zona es ${chiefsList.join(', ')}. Contacta con él o ella ante cualquier incidencia.`
-        : 'No se ha asignado todavía un responsable de zona; coordínate directamente con el director de carrera.'
+  const isChief = sectors.some((s) => s.chiefVolunteerId === volunteer.id)
+  const peerNames = ctx.peers
+    .slice()
+    .sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }))
+    .map((p) => p.name)
+  const chiefDesc = isChief
+    ? peerNames.length > 0
+      ? `Eres responsable de tu sector. Tienes a tu cargo a ${peerNames.join(', ')}. Coordínalos, reparte tareas y reporta al director de carrera.`
+      : 'Eres responsable de tu sector. Coordina al resto de voluntarios cuando se incorporen y reporta al director de carrera.'
+    : chiefsList.length > 0
+      ? `Tu responsable de zona es ${chiefsList.join(', ')}. Contacta con él o ella ante cualquier incidencia.`
+      : 'No se ha asignado todavía un responsable de zona; coordínate directamente con el director de carrera.'
 
   const hasCustomDescription = firstPoint ? isSubstantial(firstPoint.description) : false
   const hasCustomNotes = isSubstantial(volunteer.notes)

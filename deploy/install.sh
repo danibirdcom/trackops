@@ -133,11 +133,24 @@ else
   echo
   echo " Después vuelve a ejecutar este install.sh para activar HTTPS."
 fi
-echo " Auth: contraseña por proyecto (se define al crear cada proyecto)."
-echo " IA: edita /etc/trackops/env y define GEMINI_API_KEY para activar"
-echo "     los briefings generados por Gemini en la vista de voluntario."
-echo "     Tras editar: sudo systemctl restart trackops-sync"
-echo " Superadmin: define TRACKOPS_ADMIN_TOKEN en /etc/trackops/env."
-echo "     Luego entra a https://<dominio>/admin con ese token para saltar"
-echo "     las contraseñas de proyecto y poder editar/borrar cualquiera."
+
+has_gemini=$(sudo grep -Eq '^GEMINI_API_KEY=.+' /etc/trackops/env && echo yes || echo no)
+has_admin=$(sudo grep -Eq '^TRACKOPS_ADMIN_TOKEN=.+' /etc/trackops/env && echo yes || echo no)
+
+if [ "$has_gemini" = "yes" ]; then
+  echo " IA: GEMINI_API_KEY configurado. Briefings de voluntario activos."
+else
+  echo " IA (opcional): define GEMINI_API_KEY en /etc/trackops/env para"
+  echo "     activar los briefings generados por Gemini."
+fi
+
+if [ "$has_admin" = "yes" ]; then
+  echo " Superadmin: TRACKOPS_ADMIN_TOKEN configurado. Acceso en /admin."
+else
+  echo " Superadmin (opcional): define TRACKOPS_ADMIN_TOKEN en /etc/trackops/env"
+  echo "     para poder saltar cualquier contraseña desde /admin."
+fi
+echo
+echo " Auth de cada proyecto: contraseña que define el organizador al crearlo."
+echo " Tras editar /etc/trackops/env recuerda: sudo systemctl restart trackops-sync"
 echo "=========================================================="

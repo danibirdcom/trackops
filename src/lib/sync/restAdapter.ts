@@ -89,6 +89,24 @@ export class RestSyncAdapter implements SyncAdapter {
     return (await res.json()) as SessionToken
   }
 
+  async setVolunteerConfirmation(
+    projectId: string,
+    volunteerId: string,
+    confirmed: boolean,
+  ): Promise<{ confirmedAt: string | null }> {
+    const res = await fetch(
+      `${this.config.endpoint}/api/projects/${encodeURIComponent(projectId)}/volunteers/${encodeURIComponent(volunteerId)}/confirm`,
+      {
+        method: 'POST',
+        headers: baseHeaders(this.config),
+        body: JSON.stringify({ confirmed }),
+      },
+    )
+    if (!res.ok) throw new Error(await readError(res))
+    const data = (await res.json()) as { confirmedAt?: string | null }
+    return { confirmedAt: data.confirmedAt ?? null }
+  }
+
   async clearPassword(projectId: string, sessionToken: string): Promise<void> {
     const res = await fetch(
       `${this.config.endpoint}/api/projects/${encodeURIComponent(projectId)}/password`,

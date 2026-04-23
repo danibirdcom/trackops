@@ -58,6 +58,11 @@ type SyncStore = {
   masterToken: string | null
   loginAsAdmin: (token: string) => Promise<boolean>
   logoutAdmin: () => void
+  confirmVolunteer: (
+    projectId: string,
+    volunteerId: string,
+    confirmed: boolean,
+  ) => Promise<string | null>
 }
 
 function buildAdapter(config: SyncConfig): SyncAdapter | null {
@@ -316,6 +321,13 @@ export const useSyncStore = create<SyncStore>((set, get) => {
     logoutAdmin: () => {
       persistMasterToken(null)
       set({ masterToken: null })
+    },
+
+    confirmVolunteer: async (projectId, volunteerId, confirmed) => {
+      const adapter = get().adapter
+      if (!adapter) throw new Error('Sincronización no disponible')
+      const result = await adapter.setVolunteerConfirmation(projectId, volunteerId, confirmed)
+      return result.confirmedAt
     },
   }
 })

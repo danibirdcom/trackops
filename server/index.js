@@ -535,6 +535,29 @@ const server = http.createServer(async (req, res) => {
       return
     }
 
+    const confirmMatch = url.pathname.match(
+      /^\/api\/projects\/([\w.-]+)\/volunteers\/([\w.-]+)\/confirm$/,
+    )
+    if (confirmMatch && req.method === 'POST') {
+      const projectId = confirmMatch[1]
+      const volunteerId = confirmMatch[2]
+      const project = await loadProject(projectId)
+      if (!project) return json(res, 404, { error: 'project not found' }, origin)
+      const body = await readBody(req)
+      const setConfirmed = body && body.confirmed === true
+      let found = false
+      const volunteers = (project.volunteers ?? []).map((v) => {
+        if (v.id !== volunteerId) return v
+        found = true
+        return { ...v, confirmedAt: setConfirmed ? new Date().toISOString() : null }
+      })
+      if (!found) return json(res, 404, { error: 'volunteer not found' }, origin)
+      const updated = { ...project, volunteers, updatedAt: new Date().toISOString() }
+      await saveProjectFile(updated)
+      broadcast(projectId, 'project-updated', updated)
+      return json(res, 200, { ok: true, confirmedAt: setConfirmed ? updated.updatedAt : null }, origin)
+    }
+
     if (url.pathname === '/api/ai/describe' && req.method === 'POST') {
       if (!GEMINI_API_KEY) {
         return json(res, 501, { error: 'AI not configured' }, origin)

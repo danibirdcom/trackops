@@ -48,6 +48,11 @@ export interface SyncAdapter {
     opts?: { currentPassword?: string; sessionToken?: string | null },
   ): Promise<SessionToken>
   clearPassword(projectId: string, sessionToken: string): Promise<void>
+  setVolunteerConfirmation(
+    projectId: string,
+    volunteerId: string,
+    confirmed: boolean,
+  ): Promise<{ confirmedAt: string | null }>
   subscribe(
     projectId: string,
     handler: (event: SyncEvent) => void,

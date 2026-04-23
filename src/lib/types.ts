@@ -87,6 +87,7 @@ export type Volunteer = {
   role: string
   shirtSize: string | null
   notes: string
+  confirmedAt?: string | null
 }
 
 export type Annotation = {

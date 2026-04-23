@@ -1,12 +1,14 @@
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { nanoid } from 'nanoid'
-import { Plus, Trash2, Pencil, Upload, ArrowDownAZ, ArrowUpZA } from 'lucide-react'
+import { Plus, Trash2, Pencil, Upload, ArrowDownAZ, ArrowUpZA, CheckCircle2, Circle } from 'lucide-react'
 import { useProjectStore } from '@/stores/projectStore'
 import type { Point, PointType, Track, Volunteer } from '@/lib/types'
 import { parseVolunteersCsv, type CsvVolunteerRow } from '@/lib/parsers/csv'
 import { POINT_TYPES, POINT_TYPE_LABELS } from '@/lib/pointTypes'
 import { positionAtKm } from '@/lib/geo/positionAtKm'
 import { cn } from '@/lib/utils'
+
+type ConfirmationFilter = 'all' | 'confirmed' | 'pending'
 
 type Draft = Omit<Volunteer, 'id'>
 
@@ -32,6 +34,7 @@ export default function VolunteersPanel() {
   const [importFeedback, setImportFeedback] = useState<string | null>(null)
   const [importErrors, setImportErrors] = useState<string[]>([])
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+  const [filter, setFilter] = useState<ConfirmationFilter>('all')
   const csvInput = useRef<HTMLInputElement>(null)
 
   if (!current) return null
@@ -267,6 +270,12 @@ export default function VolunteersPanel() {
         </div>
       )}
 
+      <ConfirmationDashboard
+        volunteers={current.volunteers}
+        filter={filter}
+        onFilter={setFilter}
+      />
+
       <div className="flex-1 overflow-auto">
         <div className="mb-1 flex items-center justify-between gap-2">
           <p className="text-xs font-medium">Voluntarios ({current.volunteers.length})</p>
@@ -308,17 +317,38 @@ export default function VolunteersPanel() {
         ) : (
           <ul className="flex flex-col gap-1">
             {[...current.volunteers]
+              .filter((v) => {
+                if (filter === 'confirmed') return Boolean(v.confirmedAt)
+                if (filter === 'pending') return !v.confirmedAt
+                return true
+              })
               .sort((a, b) => {
                 const cmp = a.name.localeCompare(b.name, 'es', { sensitivity: 'base' })
                 return sortDir === 'asc' ? cmp : -cmp
               })
               .map((v) => (
                 <li key={v.id} className="flex items-start gap-2 rounded-md border border-border p-2 text-xs">
+                  {v.confirmedAt ? (
+                    <CheckCircle2
+                      className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400"
+                      aria-label="Confirmado"
+                    />
+                  ) : (
+                    <Circle
+                      className="mt-0.5 size-4 shrink-0 text-muted-foreground"
+                      aria-label="Pendiente"
+                    />
+                  )}
                   <div className="min-w-0 flex-1 leading-tight">
                     <p className="truncate font-medium">{v.name}</p>
                     <p className="truncate text-muted-foreground">
                       {v.role || 'Sin rol'} · {assignmentsFor(v.id)} pts
                     </p>
+                    {v.confirmedAt && (
+                      <p className="truncate text-[10px] text-emerald-700 dark:text-emerald-400">
+                        Confirmó {new Date(v.confirmedAt).toLocaleDateString('es-ES')}
+                      </p>
+                    )}
                     {(v.phone || v.email) && (
                       <p className="truncate text-[11px] text-muted-foreground">
                         {v.phone ?? ''}{v.phone && v.email ? ' · ' : ''}{v.email ?? ''}
@@ -386,4 +416,116 @@ function resolvePointType(hint: string | null): PointType {
 
 function rowError(row: CsvVolunteerRow, reason: string): string {
   return `Fila ${row.rowNumber} · ${row.name}: ${reason}`
+}
+
+type DashboardProps = {
+  volunteers: Volunteer[]
+  filter: ConfirmationFilter
+  onFilter: (f: ConfirmationFilter) => void
+}
+
+function ConfirmationDashboard({ volunteers, filter, onFilter }: DashboardProps) {
+  const { total, confirmed, pending, pct } = useMemo(() => {
+    const t = volunteers.length
+    const c = volunteers.filter((v) => v.confirmedAt).length
+    return { total: t, confirmed: c, pending: t - c, pct: t > 0 ? c / t : 0 }
+  }, [volunteers])
+
+  if (total === 0) return null
+
+  return (
+    <div className="flex flex-col gap-2 rounded-md border border-border bg-muted/30 p-3 text-xs">
+      <div className="flex items-center gap-3">
+        <Donut confirmed={confirmed} total={total} />
+        <div className="min-w-0 flex-1">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            Confirmaciones
+          </p>
+          <p className="mt-0.5 tabular-nums">
+            <span className="font-semibold text-emerald-600 dark:text-emerald-400">{confirmed}</span>
+            <span className="text-muted-foreground"> / {total} confirmados</span>
+          </p>
+          <p className="text-[11px] text-muted-foreground tabular-nums">
+            {pending} pendiente{pending === 1 ? '' : 's'} · {Math.round(pct * 100)}%
+          </p>
+        </div>
+      </div>
+      <div className="flex rounded-md border border-border p-0.5 text-[11px]">
+        <button
+          type="button"
+          onClick={() => onFilter('all')}
+          className={cn(
+            'flex-1 rounded-sm px-2 py-1',
+            filter === 'all' ? 'bg-primary text-primary-foreground' : 'hover:bg-accent',
+          )}
+        >
+          Todos ({total})
+        </button>
+        <button
+          type="button"
+          onClick={() => onFilter('confirmed')}
+          className={cn(
+            'flex-1 rounded-sm px-2 py-1',
+            filter === 'confirmed' ? 'bg-emerald-600 text-white' : 'hover:bg-accent',
+          )}
+        >
+          Confirmados ({confirmed})
+        </button>
+        <button
+          type="button"
+          onClick={() => onFilter('pending')}
+          className={cn(
+            'flex-1 rounded-sm px-2 py-1',
+            filter === 'pending' ? 'bg-amber-600 text-white' : 'hover:bg-accent',
+          )}
+        >
+          Pendientes ({pending})
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function Donut({ confirmed, total }: { confirmed: number; total: number }) {
+  const size = 78
+  const strokeWidth = 10
+  const radius = (size - strokeWidth) / 2
+  const circumference = 2 * Math.PI * radius
+  const pct = total > 0 ? confirmed / total : 0
+  const dash = pct * circumference
+  return (
+    <svg width={size} height={size} className="shrink-0" aria-hidden>
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        stroke="currentColor"
+        strokeOpacity={0.15}
+        strokeWidth={strokeWidth}
+        fill="none"
+      />
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        stroke="#059669"
+        strokeWidth={strokeWidth}
+        fill="none"
+        strokeLinecap="round"
+        strokeDasharray={`${dash} ${circumference}`}
+        transform={`rotate(-90 ${size / 2} ${size / 2})`}
+      />
+      <text
+        x="50%"
+        y="50%"
+        textAnchor="middle"
+        dominantBaseline="central"
+        fontSize="16"
+        fontWeight="600"
+        fill="currentColor"
+      >
+        {Math.round(pct * 100)}%
+      </text>
+    </svg>
+  )
 }

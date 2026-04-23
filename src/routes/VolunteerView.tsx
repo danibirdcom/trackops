@@ -13,6 +13,8 @@ import {
   AlertTriangle,
   ChevronsLeft,
   UserRound,
+  CheckCircle2,
+  Circle,
 } from 'lucide-react'
 import MapCanvas from '@/components/map/MapCanvas'
 import SimulationBar from '@/components/SimulationBar'
@@ -42,9 +44,12 @@ export default function VolunteerView() {
   const setSimulationCurrentMs = useSimulationStore((s) => s.setCurrentMs)
   const syncEnabled = useSyncStore((s) => s.enabled)
   const pullNow = useSyncStore((s) => s.pullNow)
+  const confirmVolunteer = useSyncStore((s) => s.confirmVolunteer)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [panelOpen, setPanelOpen] = useState(true)
+  const [confirmBusy, setConfirmBusy] = useState(false)
+  const [confirmError, setConfirmError] = useState<string | null>(null)
 
   useEffect(() => {
     setReadOnly(true)
@@ -218,6 +223,85 @@ export default function VolunteerView() {
               )}
             </p>
             <p className="text-[13px] leading-snug whitespace-pre-line">{description}</p>
+          </section>
+
+          <section
+            className={`rounded-md border p-3 ${
+              volunteer.confirmedAt
+                ? 'border-emerald-500/40 bg-emerald-500/10'
+                : 'border-primary/40 bg-accent/40'
+            }`}
+          >
+            {volunteer.confirmedAt ? (
+              <>
+                <p className="flex items-center gap-2 text-[13px] font-medium text-emerald-700 dark:text-emerald-400">
+                  <CheckCircle2 className="size-4" />
+                  Has confirmado tu asistencia
+                </p>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                  {new Date(volunteer.confirmedAt).toLocaleString('es-ES')}
+                </p>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!projectId || !volunteerId) return
+                    if (!confirm('¿Retirar la confirmación? El organizador te pasará a pendiente.')) return
+                    setConfirmBusy(true)
+                    setConfirmError(null)
+                    try {
+                      await confirmVolunteer(projectId, volunteerId, false)
+                      const fresh = await pullNow(projectId)
+                      if (fresh) {
+                        await saveProject(fresh)
+                        setProject(fresh)
+                      }
+                    } catch (err) {
+                      setConfirmError(err instanceof Error ? err.message : 'Error')
+                    } finally {
+                      setConfirmBusy(false)
+                    }
+                  }}
+                  disabled={confirmBusy}
+                  className="mt-2 inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[11px] hover:bg-background disabled:opacity-50"
+                >
+                  <Circle className="size-3" /> Retirar confirmación
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="mb-2 text-[13px] font-medium leading-snug">
+                  Confirma que has leído tu cometido y que estarás presente el día del evento.
+                </p>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!projectId || !volunteerId) return
+                    setConfirmBusy(true)
+                    setConfirmError(null)
+                    try {
+                      await confirmVolunteer(projectId, volunteerId, true)
+                      const fresh = await pullNow(projectId)
+                      if (fresh) {
+                        await saveProject(fresh)
+                        setProject(fresh)
+                      }
+                    } catch (err) {
+                      setConfirmError(err instanceof Error ? err.message : 'Error')
+                    } finally {
+                      setConfirmBusy(false)
+                    }
+                  }}
+                  disabled={confirmBusy}
+                  className="inline-flex w-full items-center justify-center gap-1 rounded-md bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
+                >
+                  <CheckCircle2 className="size-4" />
+                  {confirmBusy ? 'Enviando…' : 'Confirmo asistencia'}
+                </button>
+              </>
+            )}
+            {confirmError && (
+              <p className="mt-1 text-[11px] text-destructive">{confirmError}</p>
+            )}
           </section>
 
           {points.length > 0 && (

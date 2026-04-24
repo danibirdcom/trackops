@@ -42,6 +42,9 @@ export default function Project() {
   const syncError = useSyncStore((s) => s.statusError)
   const subscribeProject = useSyncStore((s) => s.subscribeProject)
   const unsubscribeProject = useSyncStore((s) => s.unsubscribeProject)
+  const listRemote = useSyncStore((s) => s.listRemote)
+  const remoteList = useSyncStore((s) => s.remoteList)
+  const getSessionToken = useSyncStore((s) => s.getSessionToken)
   const simulationActive = useSimulationStore((s) => s.active)
   const setSimulationActive = useSimulationStore((s) => s.setActive)
   const setSimulationCurrentMs = useSimulationStore((s) => s.setCurrentMs)
@@ -76,6 +79,11 @@ export default function Project() {
     }
   }, [id, syncEnabled, subscribeProject, unsubscribeProject])
 
+  useEffect(() => {
+    if (!syncEnabled) return
+    void listRemote()
+  }, [syncEnabled, listRemote])
+
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
@@ -103,6 +111,11 @@ export default function Project() {
     setMapState({ baseLayer: current.mapState.baseLayer === 'osm' ? 'topo' : 'osm' })
   }
 
+  const remoteMeta = remoteList.find((r) => r.id === id)
+  const isProtected = Boolean(remoteMeta?.protected)
+  const hasProjectAuth = Boolean(masterToken) || (id ? Boolean(getSessionToken(id)) : false)
+  const needsAuth = syncEnabled && isProtected && !hasProjectAuth
+
   return (
     <div className="flex h-full flex-col overflow-hidden">
       {masterToken && (
@@ -112,6 +125,22 @@ export default function Project() {
           <Link to="/admin" className="ml-auto underline hover:text-destructive/80">
             Panel admin
           </Link>
+        </div>
+      )}
+      {needsAuth && (
+        <div className="flex flex-wrap items-center gap-2 border-b border-amber-500/40 bg-amber-500/15 px-3 py-1.5 text-[11px] text-amber-800 dark:text-amber-200">
+          <Lock className="size-3.5" />
+          <span className="flex-1 min-w-0">
+            Este proyecto está protegido con contraseña y no has iniciado sesión en este dispositivo.
+            Tus cambios <strong>no se guardarán en el servidor</strong> hasta que te autentiques.
+          </span>
+          <button
+            type="button"
+            onClick={() => setSecurityOpen(true)}
+            className="rounded-md border border-amber-700/40 bg-background px-2 py-1 text-[11px] font-medium hover:bg-amber-500/10"
+          >
+            Iniciar sesión
+          </button>
         </div>
       )}
       <header className="flex items-center gap-1 border-b border-border bg-background px-2 py-2 sm:gap-2 sm:px-3">

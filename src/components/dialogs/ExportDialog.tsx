@@ -163,8 +163,8 @@ export default function ExportDialog({ project, onClose }: Props) {
               <div className="flex-1">
                 <p className="font-medium">Excel de voluntarios por sector</p>
                 <p className="text-xs text-muted-foreground">
-                  CSV compatible con Excel: Voluntario · Cometido · Sector · Jefe de sector,
-                  ordenado ascendente por sector.
+                  CSV compatible con Excel: Voluntario · Cometido · Descripción · Sector · Jefe de
+                  sector, ordenado ascendente por sector.
                 </p>
               </div>
               <button

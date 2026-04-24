@@ -6,6 +6,7 @@ import type { Point, PointType, Track, Volunteer } from '@/lib/types'
 import { parseVolunteersCsv, type CsvVolunteerRow } from '@/lib/parsers/csv'
 import { POINT_TYPES, POINT_TYPE_LABELS } from '@/lib/pointTypes'
 import { positionAtKm } from '@/lib/geo/positionAtKm'
+import { detectSectorForPoint } from '@/lib/geo/sectorMatch'
 import { cn } from '@/lib/utils'
 
 type ConfirmationFilter = 'all' | 'confirmed' | 'pending'
@@ -95,12 +96,16 @@ export default function VolunteersPanel() {
         const pointName =
           row.pointName?.trim() ||
           `${POINT_TYPE_LABELS[type]} km ${row.km.toFixed(1)}`
+        const sectorId = detectSectorForPoint(
+          { coordinates: coords, kmMark: row.km },
+          current.sectors,
+        )
         const point: Point = {
           id: nanoid(10),
           name: pointName,
           type,
           coordinates: coords,
-          sectorId: null,
+          sectorId,
           volunteerIds: [volunteerId],
           description: '',
           kmMark: row.km,

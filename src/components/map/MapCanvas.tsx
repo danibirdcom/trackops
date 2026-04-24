@@ -14,6 +14,7 @@ import { useProjectStore } from '@/stores/projectStore'
 import { useSimulationStore } from '@/stores/simulationStore'
 import { boundsOf } from '@/lib/geo/bounds'
 import { kmAlongTrack } from '@/lib/geo/kmAlongTrack'
+import { detectSectorForPoint } from '@/lib/geo/sectorMatch'
 import { nanoid } from 'nanoid'
 import type { Point } from '@/lib/types'
 import { useUiStore } from '@/stores/uiStore'
@@ -44,12 +45,14 @@ function ClickHandler() {
         }
       }
 
+      const coordinates: [number, number] = [lat, lng]
+      const sectorId = detectSectorForPoint({ coordinates, kmMark }, current.sectors)
       const point: Point = {
         id: nanoid(10),
         name: `Punto ${current.points.length + 1}`,
         type: addPointMode,
-        coordinates: [lat, lng],
-        sectorId: null,
+        coordinates,
+        sectorId,
         volunteerIds: [],
         description: '',
         kmMark,

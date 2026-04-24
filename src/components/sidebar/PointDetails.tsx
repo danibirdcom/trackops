@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react'
-import { X, Trash2, Plus, Search, Timer, RotateCcw, MapPin, Flag, ArrowRight } from 'lucide-react'
+import { X, Trash2, Plus, Search, Timer, RotateCcw, MapPin, Flag, ArrowRight, Sparkles } from 'lucide-react'
 import { useProjectStore } from '@/stores/projectStore'
 import { POINT_TYPES, POINT_TYPE_LABELS } from '@/lib/pointTypes'
 import type {
   PassageTime,
   Point,
   PointType,
+  Sector,
   Track,
   Volunteer,
   VolunteerAction,
@@ -16,6 +17,7 @@ import {
   isoToTimeInput,
   mergeTimeIntoDate,
 } from '@/lib/race/simulation'
+import { detectSectorForPoint } from '@/lib/geo/sectorMatch'
 import { cn } from '@/lib/utils'
 
 export default function PointDetails() {
@@ -74,6 +76,13 @@ export default function PointDetails() {
         {point.kmMark !== null && (
           <p className="text-muted-foreground">km {point.kmMark.toFixed(2)}</p>
         )}
+
+        <SectorPicker
+          point={point}
+          sectors={current.sectors}
+          onChange={(sectorId) => updatePoint(point.id, { sectorId })}
+        />
+
         {point.kmMark !== null && current.tracks.some((t) => t.race?.startTime) && (
           <PassageTimes
             point={point}
@@ -301,6 +310,78 @@ function VolunteerPicker({
 
 const inputCls =
   'w-full rounded-md border border-border bg-background px-2 py-1 text-xs outline-none focus:border-primary'
+
+function SectorPicker({
+  point,
+  sectors,
+  onChange,
+}: {
+  point: Point
+  sectors: Sector[]
+  onChange: (sectorId: string | null) => void
+}) {
+  const suggested = useMemo(
+    () => detectSectorForPoint(point, sectors),
+    [point, sectors],
+  )
+  const currentSector = sectors.find((s) => s.id === point.sectorId)
+  const suggestedSector = suggested ? sectors.find((s) => s.id === suggested) : null
+  const suggestionDiffers = suggested !== null && suggested !== point.sectorId
+
+  return (
+    <label className="block">
+      <span className="mb-1 block text-[11px] font-medium text-muted-foreground">
+        Sector
+      </span>
+      <select
+        className={inputCls}
+        value={point.sectorId ?? ''}
+        onChange={(e) => onChange(e.target.value || null)}
+      >
+        <option value="">— Sin sector —</option>
+        {sectors.map((s) => (
+          <option key={s.id} value={s.id}>
+            {s.name}
+            {s.id === suggested ? ' (detectado)' : ''}
+          </option>
+        ))}
+      </select>
+      {currentSector && (
+        <p className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground">
+          <span
+            className="size-2 rounded-sm"
+            style={{ background: currentSector.color }}
+            aria-hidden
+          />
+          {currentSector.definition.type === 'range'
+            ? `km ${currentSector.definition.startKm.toFixed(1)} – ${currentSector.definition.endKm.toFixed(1)}`
+            : 'Polígono libre'}
+        </p>
+      )}
+      {suggestionDiffers && suggestedSector && (
+        <button
+          type="button"
+          onClick={() => onChange(suggested)}
+          className="mt-1 inline-flex items-center gap-1 rounded-md border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] text-primary hover:bg-primary/20"
+          title="Aplicar la sugerencia del sistema"
+        >
+          <Sparkles className="size-3" />
+          Sugerido: {suggestedSector.name}
+        </button>
+      )}
+      {point.sectorId && suggested === point.sectorId && (
+        <p className="mt-1 inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-1.5 py-0.5 text-[10px] text-emerald-700 dark:text-emerald-400">
+          <Sparkles className="size-3" /> Auto-detectado
+        </p>
+      )}
+      {sectors.length === 0 && (
+        <p className="mt-1 text-[10px] text-muted-foreground">
+          Crea un sector en la pestaña "Sectores" para poder asignarlo aquí.
+        </p>
+      )}
+    </label>
+  )
+}
 
 type AssignedRowProps = {
   volunteer: Volunteer

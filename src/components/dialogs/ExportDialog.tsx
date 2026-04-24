@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { X, FileText, Users, Link2, Download, Copy, Check, AlertTriangle } from 'lucide-react'
+import { X, FileText, Users, Link2, Download, Copy, Check, AlertTriangle, FileSpreadsheet } from 'lucide-react'
 import type { Project } from '@/lib/types'
 import { downloadProject } from '@/lib/export/projectJson'
 import { exportPlanPdf } from '@/lib/export/pdfPlan'
 import { exportDirectoryPdf } from '@/lib/export/pdfDirectory'
+import { downloadVolunteersCsv } from '@/lib/export/volunteerSpreadsheet'
 import { buildShareUrl, type ShareUrlResult } from '@/lib/export/shareUrl'
 import { cn } from '@/lib/utils'
 
@@ -13,7 +14,7 @@ type Props = {
 }
 
 export default function ExportDialog({ project, onClose }: Props) {
-  const [busy, setBusy] = useState<null | 'plan' | 'directory' | 'json' | 'share'>(null)
+  const [busy, setBusy] = useState<null | 'plan' | 'directory' | 'json' | 'share' | 'sheet'>(null)
   const [error, setError] = useState<string | null>(null)
   const [includeContact, setIncludeContact] = useState(false)
   const [share, setShare] = useState<ShareUrlResult | null>(null)
@@ -42,6 +43,18 @@ export default function ExportDialog({ project, onClose }: Props) {
       exportDirectoryPdf(project)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error generando PDF')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const runSheet = () => {
+    setError(null)
+    setBusy('sheet')
+    try {
+      downloadVolunteersCsv(project)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Error generando CSV')
     } finally {
       setBusy(null)
     }
@@ -140,6 +153,27 @@ export default function ExportDialog({ project, onClose }: Props) {
                 className="shrink-0 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground disabled:opacity-50"
               >
                 {busy === 'directory' ? 'Generando…' : 'Descargar'}
+              </button>
+            </div>
+          </section>
+
+          <section className="rounded-md border border-border p-3">
+            <div className="flex items-start gap-2">
+              <FileSpreadsheet className="mt-0.5 size-4 text-muted-foreground" />
+              <div className="flex-1">
+                <p className="font-medium">Excel de voluntarios por sector</p>
+                <p className="text-xs text-muted-foreground">
+                  CSV compatible con Excel: Voluntario · Cometido · Sector · Jefe de sector,
+                  ordenado ascendente por sector.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={runSheet}
+                disabled={busy !== null || project.volunteers.length === 0}
+                className="shrink-0 rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
+              >
+                {busy === 'sheet' ? 'Generando…' : 'Descargar'}
               </button>
             </div>
           </section>
